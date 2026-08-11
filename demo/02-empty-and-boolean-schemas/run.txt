@@ -1,0 +1,50 @@
+
+===== empty schema (accepts anything) =====
+
+$ cat schema-any.json
+{}
+
+===== boolean schema true (accepts anything) =====
+
+$ cat schema-true.json
+true
+
+===== boolean schema false (rejects anything) =====
+
+$ cat schema-false.json
+false
+
+===== the instance =====
+
+$ cat instance.json
+null
+
+===== jsonschema (Python): null vs empty schema =====
+
+$ jsonschema-validate --schema schema-any.json --instance instance.json
+VALID
+
+===== ajv (JavaScript): null vs empty schema =====
+
+$ ajv-validate --schema schema-any.json --instance instance.json
+VALID
+
+===== jsonschema (Python): null vs schema true =====
+
+$ jsonschema-validate --schema schema-true.json --instance instance.json
+VALID
+
+===== ajv (JavaScript): null vs schema true =====
+
+$ ajv-validate --schema schema-true.json --instance instance.json
+VALID
+
+===== jsonschema (Python): null vs schema false =====
+
+$ jsonschema-validate --schema schema-false.json --instance instance.json
+INVALID: False schema does not allow None
+
+===== ajv (JavaScript): null vs schema false =====
+
+$ ajv-validate --schema schema-false.json --instance instance.json
+INVALID: boolean schema is false

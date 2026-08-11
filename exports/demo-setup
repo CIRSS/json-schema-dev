@@ -1,0 +1,1 @@
+repro.require shell-notebook master ${REPROS_DEV}

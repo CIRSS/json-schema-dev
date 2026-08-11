@@ -1,0 +1,102 @@
+#!/usr/bin/env node
+// Validate a JSON instance against a JSON Schema, at the 2020-12 dialect.
+//
+// Usage: ajv-validate --schema FILE --instance FILE
+//
+// Arguments are named, not positional, so the schema and instance cannot be
+// swapped by accident. Uses Ajv's 2020-12 build so the verdict is directly
+// comparable with jsonschema-validate. The verdict is written to stdout as
+// `VALID` or one `INVALID: ...` line per error; diagnostics go to stderr.
+// Exit status:
+//
+//     0  the instance is valid
+//     1  the instance is invalid
+//     2  error (bad arguments, unreadable file, malformed JSON, invalid schema)
+'use strict';
+
+const fs = require('fs');
+const { parseArgs } = require('node:util');
+const Ajv2020Module = require('ajv/dist/2020');
+const Ajv2020 = Ajv2020Module.default || Ajv2020Module;
+
+const PROG = 'ajv-validate';
+const USAGE = `usage: ${PROG} --schema FILE --instance FILE`;
+const EXIT_VALID = 0;
+const EXIT_INVALID = 1;
+const EXIT_ERROR = 2;
+
+function die(message) {
+  process.stderr.write(`${PROG}: error: ${message}\n`);
+  process.exit(EXIT_ERROR);
+}
+
+function loadJson(path, role) {
+  let text;
+  try {
+    text = fs.readFileSync(path, 'utf8');
+  } catch (e) {
+    if (e.code === 'ENOENT') die(`${role} file not found: ${path}`);
+    if (e.code === 'EISDIR') die(`${role} path is a directory: ${path}`);
+    die(`cannot read ${role} file ${path}: ${e.message}`);
+  }
+  try {
+    return JSON.parse(text);
+  } catch (e) {
+    die(`${role} file ${path} is not valid JSON: ${e.message}`);
+  }
+}
+
+function parseCli() {
+  let values;
+  try {
+    ({ values } = parseArgs({
+      args: process.argv.slice(2),
+      options: {
+        schema: { type: 'string', short: 's' },
+        instance: { type: 'string', short: 'i' },
+        help: { type: 'boolean', short: 'h' },
+      },
+      allowPositionals: false,
+    }));
+  } catch (e) {
+    process.stderr.write(`${PROG}: error: ${e.message}\n${USAGE}\n`);
+    process.exit(EXIT_ERROR);
+  }
+  if (values.help) {
+    process.stdout.write(USAGE + '\n');
+    process.exit(EXIT_VALID);
+  }
+  if (!values.schema || !values.instance) {
+    process.stderr.write(`${PROG}: error: both --schema and --instance are required\n${USAGE}\n`);
+    process.exit(EXIT_ERROR);
+  }
+  return values;
+}
+
+function main() {
+  const opts = parseCli();
+  const schema = loadJson(opts.schema, 'schema');
+  const instance = loadJson(opts.instance, 'instance');
+
+  const ajv = new Ajv2020({ allErrors: true, strict: false });
+  let validate;
+  try {
+    validate = ajv.compile(schema);
+  } catch (e) {
+    const clauses = e.message.replace(/^schema is invalid:\s*/, '').split(', ');
+    die(`${opts.schema} is not a valid JSON Schema: ${[...new Set(clauses)].join(', ')}`);
+  }
+
+  if (validate(instance)) {
+    process.stdout.write('VALID\n');
+    return EXIT_VALID;
+  }
+  for (const err of validate.errors) {
+    const loc = err.instancePath || '/';
+    process.stdout.write(loc === '/' ? `INVALID: ${err.message}\n`
+                                     : `INVALID: ${loc}: ${err.message}\n`);
+  }
+  return EXIT_INVALID;
+}
+
+process.exit(main());

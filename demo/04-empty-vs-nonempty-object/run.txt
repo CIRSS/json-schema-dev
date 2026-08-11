@@ -1,0 +1,35 @@
+
+===== the schema (object, required id) =====
+
+$ cat schema.json
+{ "type": "object", "required": ["id"] }
+
+===== the empty object =====
+
+$ cat instance-empty.json
+{}
+
+===== the minimal object =====
+
+$ cat instance-min.json
+{ "id": "x" }
+
+===== jsonschema (Python): empty object =====
+
+$ jsonschema-validate --schema schema.json --instance instance-empty.json
+INVALID: 'id' is a required property
+
+===== ajv (JavaScript): empty object =====
+
+$ ajv-validate --schema schema.json --instance instance-empty.json
+INVALID: must have required property 'id'
+
+===== jsonschema (Python): minimal object =====
+
+$ jsonschema-validate --schema schema.json --instance instance-min.json
+VALID
+
+===== ajv (JavaScript): minimal object =====
+
+$ ajv-validate --schema schema.json --instance instance-min.json
+VALID

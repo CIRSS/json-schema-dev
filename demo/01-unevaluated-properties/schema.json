@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.org/json-schema-dev/demo/unevaluated-properties",
+  "title": "unevaluatedProperties closes over allOf",
+  "description": "Every property a valid instance may carry is introduced inside an allOf branch; unevaluatedProperties:false then rejects anything left over. additionalProperties:false could not do this, because it does not see properties contributed through allOf.",
+  "type": "object",
+  "allOf": [
+    { "properties": { "a": { "type": "string" } } },
+    { "properties": { "b": { "type": "string" } } }
+  ],
+  "unevaluatedProperties": false
+}

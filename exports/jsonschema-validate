@@ -1,0 +1,88 @@
+#!/usr/bin/env python3
+"""Validate a JSON instance against a JSON Schema, at the 2020-12 dialect.
+
+Usage: jsonschema-validate --schema FILE --instance FILE
+
+Arguments are named, not positional, so the schema and instance cannot be
+swapped by accident. The 2020-12 dialect is forced regardless of the schema's
+own $schema, so the verdict is directly comparable with ajv-validate. The
+verdict is written to stdout as `VALID` or one `INVALID: ...` line per error;
+diagnostics go to stderr. Exit status:
+
+    0  the instance is valid
+    1  the instance is invalid
+    2  error (bad arguments, unreadable file, malformed JSON, invalid schema)
+"""
+import argparse
+import json
+import sys
+
+from jsonschema import Draft202012Validator
+from jsonschema.exceptions import SchemaError
+
+PROG = "jsonschema-validate"
+EXIT_VALID, EXIT_INVALID, EXIT_ERROR = 0, 1, 2
+
+
+def die(message):
+    print(f"{PROG}: error: {message}", file=sys.stderr)
+    sys.exit(EXIT_ERROR)
+
+
+def load_json(path, role):
+    try:
+        with open(path) as f:
+            return json.load(f)
+    except FileNotFoundError:
+        die(f"{role} file not found: {path}")
+    except IsADirectoryError:
+        die(f"{role} path is a directory: {path}")
+    except OSError as e:
+        die(f"cannot read {role} file {path}: {e.strerror}")
+    except json.JSONDecodeError as e:
+        die(f"{role} file {path} is not valid JSON: {e}")
+
+
+def location(error):
+    return "/" + "/".join(str(p) for p in error.absolute_path)
+
+
+def parse_args(argv):
+    # argparse exits 0 on --help and 2 on a bad invocation, matching the
+    # exit-status contract above.
+    parser = argparse.ArgumentParser(
+        prog=PROG,
+        description="Validate a JSON instance against a JSON Schema (2020-12 dialect).",
+    )
+    parser.add_argument("-s", "--schema", required=True, metavar="FILE",
+                        help="the JSON Schema file")
+    parser.add_argument("-i", "--instance", required=True, metavar="FILE",
+                        help="the JSON instance file")
+    return parser.parse_args(argv[1:])
+
+
+def main(argv):
+    args = parse_args(argv)
+    schema = load_json(args.schema, "schema")
+    instance = load_json(args.instance, "instance")
+
+    try:
+        Draft202012Validator.check_schema(schema)
+    except SchemaError as e:
+        die(f"{args.schema} is not a valid JSON Schema: {e.message}")
+
+    errors = sorted(
+        Draft202012Validator(schema).iter_errors(instance),
+        key=lambda e: list(e.absolute_path),
+    )
+    if not errors:
+        print("VALID")
+        return EXIT_VALID
+    for e in errors:
+        loc = location(e)
+        print(f"INVALID: {e.message}" if loc == "/" else f"INVALID: {loc}: {e.message}")
+    return EXIT_INVALID
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))

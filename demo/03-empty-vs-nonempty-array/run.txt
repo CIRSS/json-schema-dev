@@ -1,0 +1,35 @@
+
+===== the schema (array, minItems 1) =====
+
+$ cat schema.json
+{ "type": "array", "minItems": 1 }
+
+===== the empty array =====
+
+$ cat instance-empty.json
+[]
+
+===== a one-element array =====
+
+$ cat instance-one.json
+[1]
+
+===== jsonschema (Python): empty array =====
+
+$ jsonschema-validate --schema schema.json --instance instance-empty.json
+INVALID: [] should be non-empty
+
+===== ajv (JavaScript): empty array =====
+
+$ ajv-validate --schema schema.json --instance instance-empty.json
+INVALID: must NOT have fewer than 1 items
+
+===== jsonschema (Python): one-element array =====
+
+$ jsonschema-validate --schema schema.json --instance instance-one.json
+VALID
+
+===== ajv (JavaScript): one-element array =====
+
+$ ajv-validate --schema schema.json --instance instance-one.json
+VALID

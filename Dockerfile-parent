@@ -1,0 +1,25 @@
+FROM cirss/repro-parent:latest
+
+ARG PARENT_BUILD_ARG_1
+ENV NODE_VERSION=${PARENT_BUILD_ARG_1}
+
+# Python (for the jsonschema validator), via apt so the parent needs only the
+# published framework base image and nothing built locally
+RUN apt-get update; \
+	apt-get install -y python3 python3-pip; \
+	python3 --version; \
+	pip3 --version
+
+# Node.js from the official prebuilt binary (exact version, no apt repo)
+RUN apt-get install -y xz-utils; \
+	ARCH="$(dpkg --print-architecture)"; \
+	case "$ARCH" in \
+		amd64) NODE_ARCH=x64 ;; \
+		arm64) NODE_ARCH=arm64 ;; \
+		*) echo "unsupported architecture: $ARCH" >&2; exit 1 ;; \
+	esac; \
+	wget -q "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-${NODE_ARCH}.tar.xz"; \
+	tar -xJf "node-v${NODE_VERSION}-linux-${NODE_ARCH}.tar.xz" -C /usr/local --strip-components=1 --no-same-owner; \
+	rm "node-v${NODE_VERSION}-linux-${NODE_ARCH}.tar.xz"; \
+	node --version; \
+	npm --version

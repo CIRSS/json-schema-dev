@@ -1,0 +1,16 @@
+
+NODE_VERSION=22.11.0
+
+REPRO_NAME=json-schema-dev
+REPRO_DOCKER_ORG=cirss
+REPRO_IMAGE_TAG=latest
+
+PARENT_BUILD_ARG_1=${NODE_VERSION}
+PARENT_IMAGE=${REPRO_DOCKER_ORG}/${REPRO_NAME}-parent:latest
+
+DOCKER_BUILD_PROGRESS=plain
+
+image:                  build-image   ##
+start:                  start-repro   ##
+
+##

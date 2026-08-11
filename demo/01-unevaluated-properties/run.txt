@@ -1,0 +1,53 @@
+
+===== the schema =====
+
+$ cat schema.json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.org/json-schema-dev/demo/unevaluated-properties",
+  "title": "unevaluatedProperties closes over allOf",
+  "description": "Every property a valid instance may carry is introduced inside an allOf branch; unevaluatedProperties:false then rejects anything left over. additionalProperties:false could not do this, because it does not see properties contributed through allOf.",
+  "type": "object",
+  "allOf": [
+    { "properties": { "a": { "type": "string" } } },
+    { "properties": { "b": { "type": "string" } } }
+  ],
+  "unevaluatedProperties": false
+}
+
+===== the valid instance =====
+
+$ cat instance-valid.json
+{
+  "a": "hello",
+  "b": "world"
+}
+
+===== the invalid instance =====
+
+$ cat instance-invalid.json
+{
+  "a": "hello",
+  "b": "world",
+  "c": "unexpected"
+}
+
+===== jsonschema (Python): valid instance =====
+
+$ jsonschema-validate --schema schema.json --instance instance-valid.json
+VALID
+
+===== ajv (JavaScript): valid instance =====
+
+$ ajv-validate --schema schema.json --instance instance-valid.json
+VALID
+
+===== jsonschema (Python): invalid instance =====
+
+$ jsonschema-validate --schema schema.json --instance instance-invalid.json
+INVALID: Unevaluated properties are not allowed ('c' was unexpected)
+
+===== ajv (JavaScript): invalid instance =====
+
+$ ajv-validate --schema schema.json --instance instance-invalid.json
+INVALID: must NOT have unevaluated properties
