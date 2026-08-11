@@ -1,0 +1,9 @@
+{
+  "$defs": {
+    "named": {
+      "$id": "https://example.org/named",
+      "properties": { "a": { "type": "number" } }
+    }
+  },
+  "$ref": "https://example.org/named"
+}

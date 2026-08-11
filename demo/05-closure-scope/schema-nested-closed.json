@@ -1,0 +1,11 @@
+{
+  "type": "object",
+  "properties": {
+    "inner": {
+      "type": "object",
+      "properties": { "x": { "type": "number" } },
+      "unevaluatedProperties": false
+    }
+  },
+  "unevaluatedProperties": false
+}

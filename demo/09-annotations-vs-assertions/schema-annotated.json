@@ -1,0 +1,6 @@
+{
+  "title": "Account balance",
+  "description": "A positive number, in dollars. Must never be a string.",
+  "$comment": "Reviewed 2026-08-11. Strings are rejected here.",
+  "type": "string"
+}

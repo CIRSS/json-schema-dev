@@ -1,35 +1,84 @@
 
-===== the schema (object, required id) =====
+===== properties does not make a property required ===========================
+
+The object counterpart of the previous demo, and the same trap. "type":
+"object" accepts {}. Listing a property under properties does not make it
+mandatory — properties says "if this key appears, here is its shape," which
+is a constraint on presence, not a demand for it. Only required makes a
+property obligatory.
+
+So a schema can describe every field of a record in full detail and still
+accept the empty object. This is the single most common defect in a
+generated schema: the shape is right, required is missing, and the schema
+validates documents that carry none of the data it describes.
+
+The boundary worth testing is {} against the minimal satisfying object —
+one required property and nothing else. If the empty object passes, the
+schema is not asserting what it appears to assert.
+
+===== the schema (object, required id) =======================================
 
 $ cat schema.json
 { "type": "object", "required": ["id"] }
 
-===== the empty object =====
+===== the empty object =======================================================
 
 $ cat instance-empty.json
 {}
 
-===== the minimal object =====
-
-$ cat instance-min.json
-{ "id": "x" }
-
-===== jsonschema (Python): empty object =====
+===== jsonschema (Python): empty object ======================================
 
 $ jsonschema-validate --schema schema.json --instance instance-empty.json
 INVALID: 'id' is a required property
 
-===== ajv (JavaScript): empty object =====
+===== ajv (JavaScript): empty object =========================================
 
 $ ajv-validate --schema schema.json --instance instance-empty.json
 INVALID: must have required property 'id'
 
-===== jsonschema (Python): minimal object =====
+===== the minimal object =====================================================
+
+$ cat instance-min.json
+{ "id": "x" }
+
+===== jsonschema (Python): minimal object ====================================
 
 $ jsonschema-validate --schema schema.json --instance instance-min.json
 VALID
 
-===== ajv (JavaScript): minimal object =====
+===== ajv (JavaScript): minimal object =======================================
 
 $ ajv-validate --schema schema.json --instance instance-min.json
+VALID
+
+===== required asks about presence, not content ==============================
+
+One more instance, differing from the minimal object in exactly one way:
+the value of id is null rather than a string.
+
+It passes. required is a question about which keys a document carries, and
+a key whose value is null is carried. Null is a value like any other here,
+not a way of spelling absence — the two are different states of a document,
+and only the missing key is missing.
+
+This matters because null is what a producer emits for a field it could not
+populate. required will not catch that; it reports the key as present and
+says nothing about whether anything is in it. Ruling it out takes a
+constraint on the value, such as declaring the property's type.
+
+===== the minimal object with a null value ===================================
+
+$ cat instance-null.json
+{
+  "id": null
+}
+
+===== jsonschema (Python): null value ========================================
+
+$ jsonschema-validate --schema schema.json --instance instance-null.json
+VALID
+
+===== ajv (JavaScript): null value ===========================================
+
+$ ajv-validate --schema schema.json --instance instance-null.json
 VALID

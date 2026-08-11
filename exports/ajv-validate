@@ -78,7 +78,21 @@ function main() {
   const schema = loadJson(opts.schema, 'schema');
   const instance = loadJson(opts.instance, 'instance');
 
-  const ajv = new Ajv2020({ allErrors: true, strict: false });
+  // Ajv's own notices (e.g. an unknown format being ignored) go through its
+  // logger, which by default writes them unprefixed and can repeat one notice
+  // several times for a single schema. Route them through the same
+  // `prog: level: message` shape as our other diagnostics, and collapse
+  // duplicates -- the same treatment the invalid-schema clauses get below.
+  const announced = new Set();
+  const notice = (level) => (...parts) => {
+    const message = parts.join(' ');
+    if (announced.has(message)) return;
+    announced.add(message);
+    process.stderr.write(`${PROG}: ${level}: ${message}\n`);
+  };
+  const logger = { log: notice('note'), warn: notice('warning'), error: notice('error') };
+
+  const ajv = new Ajv2020({ allErrors: true, strict: false, logger });
   let validate;
   try {
     validate = ajv.compile(schema);

@@ -1,12 +1,26 @@
 
-===== the schema =====
+===== unevaluatedProperties closes over allOf ================================
+
+An object schema is "closed" when it rejects properties it did not declare.
+The obvious way to close one is additionalProperties: false — but that
+keyword only sees the properties declared in its own schema object. It is
+blind to properties contributed through allOf, so on a composed schema it
+rejects everything the branches introduced.
+
+unevaluatedProperties: false is the keyword that sees through composition.
+It runs after the branches and rejects only what no evaluated subschema
+claimed. That makes it the construct closure rests on whenever a schema is
+assembled from parts rather than written flat.
+
+Both validators below are pinned to JSON Schema 2020-12. The keyword was
+introduced in 2019-09: a draft-07 validator does not know it, and unknown
+keywords are ignored rather than rejected, so the same schema silently
+fails open — the invalid instance would pass.
+
+===== the schema =============================================================
 
 $ cat schema.json
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://example.org/json-schema-dev/demo/unevaluated-properties",
-  "title": "unevaluatedProperties closes over allOf",
-  "description": "Every property a valid instance may carry is introduced inside an allOf branch; unevaluatedProperties:false then rejects anything left over. additionalProperties:false could not do this, because it does not see properties contributed through allOf.",
   "type": "object",
   "allOf": [
     { "properties": { "a": { "type": "string" } } },
@@ -15,7 +29,13 @@ $ cat schema.json
   "unevaluatedProperties": false
 }
 
-===== the valid instance =====
+===== what to watch for ======================================================
+
+Property "c" appears in no allOf branch. The valid instance omits it and
+passes; the invalid instance carries it and is rejected by both validators,
+in different words but with the same verdict.
+
+===== the valid instance =====================================================
 
 $ cat instance-valid.json
 {
@@ -23,7 +43,17 @@ $ cat instance-valid.json
   "b": "world"
 }
 
-===== the invalid instance =====
+===== jsonschema (Python): valid instance ====================================
+
+$ jsonschema-validate --schema schema.json --instance instance-valid.json
+VALID
+
+===== ajv (JavaScript): valid instance =======================================
+
+$ ajv-validate --schema schema.json --instance instance-valid.json
+VALID
+
+===== the invalid instance ===================================================
 
 $ cat instance-invalid.json
 {
@@ -32,22 +62,61 @@ $ cat instance-invalid.json
   "c": "unexpected"
 }
 
-===== jsonschema (Python): valid instance =====
-
-$ jsonschema-validate --schema schema.json --instance instance-valid.json
-VALID
-
-===== ajv (JavaScript): valid instance =====
-
-$ ajv-validate --schema schema.json --instance instance-valid.json
-VALID
-
-===== jsonschema (Python): invalid instance =====
+===== jsonschema (Python): invalid instance ==================================
 
 $ jsonschema-validate --schema schema.json --instance instance-invalid.json
 INVALID: Unevaluated properties are not allowed ('c' was unexpected)
 
-===== ajv (JavaScript): invalid instance =====
+===== ajv (JavaScript): invalid instance =====================================
 
 $ ajv-validate --schema schema.json --instance instance-invalid.json
 INVALID: must NOT have unevaluated properties
+
+===== what if a or b is left out? ============================================
+
+Nothing rejects them. unevaluatedProperties governs which properties may
+appear, not which must — and properties is likewise a conditional: it says
+"if this key is present, here is its shape." Neither keyword makes anything
+mandatory. Only required does that, and this schema has no required.
+
+So the schema closes the object without populating it: omit b, or omit
+both, and it still validates. The empty object passes a schema that reads
+at a glance as describing two string properties.
+
+That is the pairing to remember. unevaluatedProperties: false answers "may
+anything else appear?"; required answers "must these appear?" A closed
+schema with no required is closed and empty-able at the same time, which is
+almost never what the author meant. See demo 04 for the same trap without
+the composition.
+
+===== only a =================================================================
+
+$ cat instance-only-a.json
+{
+  "a": "hello"
+}
+
+===== jsonschema (Python): only a ============================================
+
+$ jsonschema-validate --schema schema.json --instance instance-only-a.json
+VALID
+
+===== ajv (JavaScript): only a ===============================================
+
+$ ajv-validate --schema schema.json --instance instance-only-a.json
+VALID
+
+===== neither a nor b ========================================================
+
+$ cat instance-empty.json
+{}
+
+===== jsonschema (Python): neither a nor b ===================================
+
+$ jsonschema-validate --schema schema.json --instance instance-empty.json
+VALID
+
+===== ajv (JavaScript): neither a nor b ======================================
+
+$ ajv-validate --schema schema.json --instance instance-empty.json
+VALID

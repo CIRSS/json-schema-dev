@@ -1,0 +1,7 @@
+{
+  "$id": "https://nowhere.invalid/this/is/never/fetched",
+  "$defs": {
+    "named": { "properties": { "a": { "type": "string" } } }
+  },
+  "$ref": "#/$defs/named"
+}

@@ -11,14 +11,15 @@ diagnostics go to stderr. Exit status:
 
     0  the instance is valid
     1  the instance is invalid
-    2  error (bad arguments, unreadable file, malformed JSON, invalid schema)
+    2  error (bad arguments, unreadable file, malformed JSON, invalid schema,
+       unresolvable $ref)
 """
 import argparse
 import json
 import sys
 
 from jsonschema import Draft202012Validator
-from jsonschema.exceptions import SchemaError
+from jsonschema.exceptions import SchemaError, _WrappedReferencingError
 
 PROG = "jsonschema-validate"
 EXIT_VALID, EXIT_INVALID, EXIT_ERROR = 0, 1, 2
@@ -71,10 +72,16 @@ def main(argv):
     except SchemaError as e:
         die(f"{args.schema} is not a valid JSON Schema: {e.message}")
 
-    errors = sorted(
-        Draft202012Validator(schema).iter_errors(instance),
-        key=lambda e: list(e.absolute_path),
-    )
+    # $ref targets are resolved lazily, during validation rather than by
+    # check_schema, so an unresolvable one surfaces here and must be reported
+    # as an error (exit 2) rather than as an invalid instance.
+    try:
+        errors = sorted(
+            Draft202012Validator(schema).iter_errors(instance),
+            key=lambda e: list(e.absolute_path),
+        )
+    except _WrappedReferencingError as e:
+        die(f"{args.schema} contains an unresolvable $ref: {e}")
     if not errors:
         print("VALID")
         return EXIT_VALID
