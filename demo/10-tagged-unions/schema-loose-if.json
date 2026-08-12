@@ -1,0 +1,4 @@
+{
+  "if":   { "properties": { "kind": { "const": "circle" } } },
+  "then": { "required": ["radius"] }
+}

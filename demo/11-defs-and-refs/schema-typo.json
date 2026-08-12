@@ -1,0 +1,8 @@
+{
+  "$defs": {
+    "Hex": { "type": "string", "pattern": "^[0-9a-f]+$" }
+  },
+  "properties": {
+    "checksum": { "$ref": "#/$defs/Hexx" }
+  }
+}

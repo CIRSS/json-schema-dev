@@ -1,17 +1,21 @@
 #!/usr/bin/env node
 // Validate a JSON instance against a JSON Schema, at the 2020-12 dialect.
 //
-// Usage: ajv-validate --schema FILE --instance FILE
+// Usage: ajv-validate --schema FILE --instance FILE [--ref FILE]...
 //
 // Arguments are named, not positional, so the schema and instance cannot be
 // swapped by accident. Uses Ajv's 2020-12 build so the verdict is directly
-// comparable with jsonschema-validate. The verdict is written to stdout as
-// `VALID` or one `INVALID: ...` line per error; diagnostics go to stderr.
-// Exit status:
+// comparable with jsonschema-validate. Each --ref FILE loads an additional
+// schema and registers it under its $id, making it available to $ref in the
+// main schema -- this is how a schema spread over several files is validated
+// against. A --ref schema must carry a $id; there is nothing else to register
+// it under. The verdict is written to stdout as `VALID` or one `INVALID: ...`
+// line per error; diagnostics go to stderr. Exit status:
 //
 //     0  the instance is valid
 //     1  the instance is invalid
-//     2  error (bad arguments, unreadable file, malformed JSON, invalid schema)
+//     2  error (bad arguments, unreadable file, malformed JSON, invalid
+//        schema, a --ref schema without $id)
 'use strict';
 
 const fs = require('fs');
@@ -20,7 +24,7 @@ const Ajv2020Module = require('ajv/dist/2020');
 const Ajv2020 = Ajv2020Module.default || Ajv2020Module;
 
 const PROG = 'ajv-validate';
-const USAGE = `usage: ${PROG} --schema FILE --instance FILE`;
+const USAGE = `usage: ${PROG} --schema FILE --instance FILE [--ref FILE]...`;
 const EXIT_VALID = 0;
 const EXIT_INVALID = 1;
 const EXIT_ERROR = 2;
@@ -54,6 +58,7 @@ function parseCli() {
       options: {
         schema: { type: 'string', short: 's' },
         instance: { type: 'string', short: 'i' },
+        ref: { type: 'string', short: 'r', multiple: true },
         help: { type: 'boolean', short: 'h' },
       },
       allowPositionals: false,
@@ -93,6 +98,17 @@ function main() {
   const logger = { log: notice('note'), warn: notice('warning'), error: notice('error') };
 
   const ajv = new Ajv2020({ allErrors: true, strict: false, logger });
+  for (const path of opts.ref ?? []) {
+    const refSchema = loadJson(path, 'ref schema');
+    if (typeof refSchema !== 'object' || refSchema === null || !refSchema.$id) {
+      die(`ref schema file ${path} has no $id to register it under`);
+    }
+    try {
+      ajv.addSchema(refSchema);
+    } catch (e) {
+      die(`${path} is not a valid JSON Schema: ${e.message}`);
+    }
+  }
   let validate;
   try {
     validate = ajv.compile(schema);

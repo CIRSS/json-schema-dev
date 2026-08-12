@@ -1,0 +1,10 @@
+{
+  "$defs": {
+    "HasChecksum": { "required": ["checksum"] },
+    "HasPrevious": { "required": ["previous"] }
+  },
+  "allOf": [
+    { "$ref": "#/$defs/HasChecksum" },
+    { "$ref": "#/$defs/HasPrevious" }
+  ]
+}
