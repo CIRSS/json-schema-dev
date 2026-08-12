@@ -1,7 +1,7 @@
 
 ===== how far does closure reach? ============================================
 
-Demo 01 showed unevaluatedProperties: false closing an object over allOf.
+Demo 13 showed unevaluatedProperties: false closing an object over allOf.
 That raises the question this demo answers: how far does "evaluated" reach?
 Not the whole document, and not the whole schema. The unit is one instance
 location together with the keywords that apply at that same location — the

@@ -3,7 +3,7 @@
 source "${JSON_SCHEMA_DEV_CELLS_DIR}/cells.sh"
 
 doc "additionalProperties holds a schema, not a flag" << 'END_DOC'
-Demo 02 showed that true and false are schemas. This demo shows where that
+Demo 01 showed that true and false are schemas. This demo shows where that
 fact is actually used, and why the language bothers to have it.
 
 additionalProperties takes a schema and applies it to each property that
@@ -11,7 +11,7 @@ properties and patternProperties did not match. So additionalProperties:
 false says "no extra property can validate," and therefore none may appear;
 additionalProperties: true says "every extra property validates," and all
 may appear. Both read like flag syntax. Neither is: they are ordinary
-schemas sitting in a schema-valued slot, and by demo 02's equivalence, {}
+schemas sitting in a schema-valued slot, and by demo 01's equivalence, {}
 in that slot would behave exactly as true does.
 
 Draft-04 specified this keyword as taking "a boolean or a schema" — a
