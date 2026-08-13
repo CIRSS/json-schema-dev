@@ -22,6 +22,8 @@ const fs = require('fs');
 const { parseArgs } = require('node:util');
 const Ajv2020Module = require('ajv/dist/2020');
 const Ajv2020 = Ajv2020Module.default || Ajv2020Module;
+const ajvErrorsModule = require('ajv-errors');
+const ajvErrors = ajvErrorsModule.default || ajvErrorsModule;
 
 const PROG = 'ajv-validate';
 const USAGE = `usage: ${PROG} --schema FILE --instance FILE [--ref FILE]...`;
@@ -97,7 +99,12 @@ function main() {
   };
   const logger = { log: notice('note'), warn: notice('warning'), error: notice('error') };
 
+  // ajv-errors registers the (nonstandard) errorMessage keyword: a schema
+  // author's message replaces the library's for failures it covers. The
+  // matching lookup is implemented independently in jsonschema-validate, so
+  // authored messages are cross-validated like verdicts (demo 16).
   const ajv = new Ajv2020({ allErrors: true, strict: false, logger });
+  ajvErrors(ajv);
   for (const path of opts.ref ?? []) {
     const refSchema = loadJson(path, 'ref schema');
     if (typeof refSchema !== 'object' || refSchema === null || !refSchema.$id) {

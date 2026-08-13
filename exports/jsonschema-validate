@@ -19,6 +19,7 @@ or one `INVALID: ...` line per error; diagnostics go to stderr. Exit status:
 """
 import argparse
 import json
+import re
 import sys
 
 from jsonschema import Draft202012Validator
@@ -51,6 +52,82 @@ def load_json(path, role):
 
 def location(error):
     return "/" + "/".join(str(p) for p in error.absolute_path)
+
+
+def resolve_pointer(schema, path):
+    node = schema
+    for segment in path:
+        node = node[segment]
+    return node
+
+
+def custom_message(error, schema):
+    """The message from the nearest enclosing errorMessage, if any.
+
+    errorMessage is a nonstandard keyword (Ajv's ajv-errors plugin defines
+    it) that the jsonschema library ignores -- but a schema is JSON, so the
+    messages are data this wrapper can read for itself. Supported here is the
+    portable subset cross-validated by demo 16: a plain-string errorMessage
+    covers every failure within its subschema, an object supplies one message
+    per failing keyword, and ${/json/pointer} interpolates the instance value
+    at that pointer (JSON-encoded, resolved from the instance root, matching
+    ajv-errors). Failures no message covers keep the library's own message.
+    """
+    path = list(error.absolute_schema_path)
+    for depth in range(len(path), -1, -1):
+        try:
+            node = resolve_pointer(schema, path[:depth])
+        except (KeyError, IndexError, TypeError):
+            continue
+        if not isinstance(node, dict):
+            continue
+        declared = node.get("errorMessage")
+        if isinstance(declared, str):
+            return declared
+        if isinstance(declared, dict):
+            message = declared.get(error.validator)
+            if isinstance(message, str):
+                return message
+    return None
+
+
+def interpolate(message, instance, error_path):
+    """Replace each ${pointer} with the instance value it points at.
+
+    Two pointer forms, matching ajv-errors. An absolute JSON Pointer
+    (${/artifacts/0}; RFC 6901, with ~0/~1 escapes) resolves from the
+    instance root — a fixed address, useful only where the schema knows the
+    exact location. A relative JSON Pointer (${0}, ${1/digest}) resolves
+    from the failing value's own location: the integer climbs that many
+    levels up from it, and an optional path descends from there — so ${0}
+    is the failing value itself, wherever it occurs. Values are
+    JSON-encoded. A pointer that does not resolve (including the unsupported
+    trailing-# form) is left in the message as written.
+    """
+    def descend(node, pointer):
+        for token in pointer.lstrip("/").split("/") if pointer else []:
+            token = token.replace("~1", "/").replace("~0", "~")
+            node = node[int(token)] if isinstance(node, list) else node[token]
+        return node
+
+    def replace(match):
+        pointer = match.group(1)
+        try:
+            if pointer.startswith("/") or pointer == "":
+                return json.dumps(descend(instance, pointer))
+            relative = re.fullmatch(r"(0|[1-9][0-9]*)(/.*)?", pointer)
+            if relative:
+                up = int(relative.group(1))
+                if up > len(error_path):
+                    return match.group(0)
+                node = instance
+                for segment in list(error_path)[:len(error_path) - up]:
+                    node = node[segment]
+                return json.dumps(descend(node, relative.group(2) or ""))
+        except (KeyError, IndexError, TypeError, ValueError):
+            pass
+        return match.group(0)
+    return re.sub(r"\$\{([^}]*)\}", replace, message)
 
 
 def parse_args(argv):
@@ -109,7 +186,9 @@ def main(argv):
         return EXIT_VALID
     for e in errors:
         loc = location(e)
-        print(f"INVALID: {e.message}" if loc == "/" else f"INVALID: {loc}: {e.message}")
+        declared = custom_message(e, schema)
+        message = interpolate(declared, instance, e.absolute_path) if declared else e.message
+        print(f"INVALID: {message}" if loc == "/" else f"INVALID: {loc}: {message}")
     return EXIT_INVALID
 
 

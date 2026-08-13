@@ -2,8 +2,9 @@
 # Python validator (jsonschema, Draft 2020-12); python3 + pip come from the parent image
 python3 -m pip install --user 'jsonschema==4.23.0'
 
-# JavaScript validator (Ajv, 2020-12); Node is provided by the parent image
-sudo npm install -g 'ajv@8.17.1'
+# JavaScript validator (Ajv, 2020-12); Node is provided by the parent image.
+# ajv-errors supplies the errorMessage keyword (demo 16).
+sudo npm install -g 'ajv@8.17.1' 'ajv-errors@3.0.0'
 repro.env NODE_PATH '/usr/local/lib/node_modules'
 
 # the cross-validator wrappers ship as artifacts of this module (base-manifest),

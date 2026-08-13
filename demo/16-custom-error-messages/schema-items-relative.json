@@ -1,0 +1,10 @@
+{
+  "properties": {
+    "artifacts": {
+      "items": {
+        "pattern": "^[0-9a-f]{4}$",
+        "errorMessage": "artifact digest ${0} is malformed"
+      }
+    }
+  }
+}

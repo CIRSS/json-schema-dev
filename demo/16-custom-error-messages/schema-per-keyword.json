@@ -1,0 +1,7 @@
+{
+  "type": "object",
+  "required": ["checksum"],
+  "errorMessage": {
+    "required": "a record must carry a checksum"
+  }
+}
