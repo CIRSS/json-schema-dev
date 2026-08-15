@@ -2,6 +2,7 @@
 // Validate a JSON instance against a JSON Schema, at the 2020-12 dialect.
 //
 // Usage: ajv-validate --schema FILE --instance FILE [--ref FILE]...
+//                     [--reject-duplicate-members]
 //
 // Arguments are named, not positional, so the schema and instance cannot be
 // swapped by accident. Uses Ajv's 2020-12 build so the verdict is directly
@@ -9,13 +10,19 @@
 // schema and registers it under its $id, making it available to $ref in the
 // main schema -- this is how a schema spread over several files is validated
 // against. A --ref schema must carry a $id; there is nothing else to register
-// it under. The verdict is written to stdout as `VALID` or one `INVALID: ...`
-// line per error; diagnostics go to stderr. Exit status:
+// it under. --reject-duplicate-members makes a duplicate object member name
+// anywhere in the instance an INVALID verdict: JSON's grammar permits
+// duplicates but parsers silently keep the last value, so no schema can ever
+// see one -- parse time is the only tier that can check. The verdict is
+// written to stdout as `VALID` or one `INVALID: ...` line per error;
+// diagnostics go to stderr. Exit status:
 //
 //     0  the instance is valid
-//     1  the instance is invalid
-//     2  error (bad arguments, unreadable file, malformed JSON, invalid
-//        schema, a --ref schema without $id)
+//     1  the instance is invalid -- including an instance file that is not
+//        valid JSON: the parse failure is a verdict about the submitted
+//        document (its lowest grammar tier), not an operational error
+//     2  error (bad arguments, unreadable file, schema or ref file with
+//        malformed JSON, invalid schema, a --ref schema without $id)
 'use strict';
 
 const fs = require('fs');
@@ -26,7 +33,7 @@ const ajvErrorsModule = require('ajv-errors');
 const ajvErrors = ajvErrorsModule.default || ajvErrorsModule;
 
 const PROG = 'ajv-validate';
-const USAGE = `usage: ${PROG} --schema FILE --instance FILE [--ref FILE]...`;
+const USAGE = `usage: ${PROG} --schema FILE --instance FILE [--ref FILE]... [--reject-duplicate-members]`;
 const EXIT_VALID = 0;
 const EXIT_INVALID = 1;
 const EXIT_ERROR = 2;
@@ -36,15 +43,18 @@ function die(message) {
   process.exit(EXIT_ERROR);
 }
 
-function loadJson(path, role) {
-  let text;
+function readText(path, role) {
   try {
-    text = fs.readFileSync(path, 'utf8');
+    return fs.readFileSync(path, 'utf8');
   } catch (e) {
     if (e.code === 'ENOENT') die(`${role} file not found: ${path}`);
     if (e.code === 'EISDIR') die(`${role} path is a directory: ${path}`);
     die(`cannot read ${role} file ${path}: ${e.message}`);
   }
+}
+
+function loadJson(path, role) {
+  const text = readText(path, role);
   try {
     return JSON.parse(text);
   } catch (e) {
@@ -61,6 +71,7 @@ function parseCli() {
         schema: { type: 'string', short: 's' },
         instance: { type: 'string', short: 'i' },
         ref: { type: 'string', short: 'r', multiple: true },
+        'reject-duplicate-members': { type: 'boolean' },
         help: { type: 'boolean', short: 'h' },
       },
       allowPositionals: false,
@@ -80,10 +91,75 @@ function parseCli() {
   return values;
 }
 
+// Collect every duplicate object member name in a JSON text. JSON.parse
+// silently keeps the last value for a repeated name, so duplicates must be
+// found by scanning the raw text; the caller guarantees the text has already
+// parsed as JSON, which is what keeps this walk simple. Escape sequences in
+// member names are decoded so "a" and "a" collide, matching what
+// JSON.parse would treat as the same member.
+function findDuplicateMembers(text) {
+  const duplicates = new Set();
+  let i = 0;
+  const ESCAPES = { '"': '"', '\\': '\\', '/': '/', b: '\b', f: '\f', n: '\n', r: '\r', t: '\t' };
+  const skipWs = () => { while (' \t\n\r'.includes(text[i])) i++; };
+  function scanString() {
+    i++;  // opening quote
+    let s = '';
+    while (text[i] !== '"') {
+      if (text[i] === '\\') {
+        if (text[i + 1] === 'u') { s += String.fromCharCode(parseInt(text.slice(i + 2, i + 6), 16)); i += 6; }
+        else { s += ESCAPES[text[i + 1]]; i += 2; }
+      } else { s += text[i]; i++; }
+    }
+    i++;  // closing quote
+    return s;
+  }
+  function scanValue() {
+    skipWs();
+    if (text[i] === '{') { scanObject(); return; }
+    if (text[i] === '[') { scanArray(); return; }
+    if (text[i] === '"') { scanString(); return; }
+    while (i < text.length && !',}] \t\n\r'.includes(text[i])) i++;  // number/true/false/null
+  }
+  function scanObject() {
+    i++;  // '{'
+    const seen = new Set();
+    skipWs();
+    if (text[i] === '}') { i++; return; }
+    for (;;) {
+      skipWs();
+      const name = scanString();
+      if (seen.has(name)) duplicates.add(name);
+      seen.add(name);
+      skipWs();
+      i++;  // ':'
+      scanValue();
+      skipWs();
+      if (text[i] === ',') { i++; continue; }
+      i++;  // '}'
+      return;
+    }
+  }
+  function scanArray() {
+    i++;  // '['
+    skipWs();
+    if (text[i] === ']') { i++; return; }
+    for (;;) {
+      scanValue();
+      skipWs();
+      if (text[i] === ',') { i++; continue; }
+      i++;  // ']'
+      return;
+    }
+  }
+  scanValue();
+  return duplicates;
+}
+
 function main() {
   const opts = parseCli();
   const schema = loadJson(opts.schema, 'schema');
-  const instance = loadJson(opts.instance, 'instance');
+  const instanceText = readText(opts.instance, 'instance');
 
   // Ajv's own notices (e.g. an unknown format being ignored) go through its
   // logger, which by default writes them unprefixed and can repeat one notice
@@ -122,6 +198,35 @@ function main() {
   } catch (e) {
     const clauses = e.message.replace(/^schema is invalid:\s*/, '').split(', ');
     die(`${opts.schema} is not a valid JSON Schema: ${[...new Set(clauses)].join(', ')}`);
+  }
+
+  // The instance's parse failure is a verdict, not an error: a document that
+  // was delivered but does not parse is invalid at the lowest grammar tier --
+  // JSON itself -- reported with a uniform first phrase, the parser's own
+  // detail riding behind it like any other library message. Only failing to
+  // read the file at all is operational: everything about the instance is a
+  // verdict; everything else is an error. Parsed only after the schema has
+  // been vetted, so a broken setup still exits 2.
+  let instance;
+  try {
+    instance = JSON.parse(instanceText);
+  } catch (e) {
+    process.stdout.write(`INVALID: instance is not valid JSON: ${e.message}\n`);
+    return EXIT_INVALID;
+  }
+
+  // Like the parse verdict above: a duplicate member name is a fact about
+  // the submitted document, reported deterministically (all names, sorted)
+  // so the flag's output is cross-validated word for word with
+  // jsonschema-validate.
+  if (opts['reject-duplicate-members']) {
+    const duplicates = findDuplicateMembers(instanceText);
+    if (duplicates.size > 0) {
+      for (const name of [...duplicates].sort()) {
+        process.stdout.write(`INVALID: instance contains duplicate member name ${JSON.stringify(name)}\n`);
+      }
+      return EXIT_INVALID;
+    }
   }
 
   if (validate(instance)) {

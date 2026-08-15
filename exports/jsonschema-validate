@@ -2,6 +2,7 @@
 """Validate a JSON instance against a JSON Schema, at the 2020-12 dialect.
 
 Usage: jsonschema-validate --schema FILE --instance FILE [--ref FILE]...
+                           [--reject-duplicate-members]
 
 Arguments are named, not positional, so the schema and instance cannot be
 swapped by accident. The 2020-12 dialect is forced regardless of the schema's
@@ -9,13 +10,20 @@ own $schema, so the verdict is directly comparable with ajv-validate. Each
 --ref FILE loads an additional schema and registers it under its $id, making
 it available to $ref in the main schema — this is how a schema spread over
 several files is validated against. A --ref schema must carry a $id; there is
-nothing else to register it under. The verdict is written to stdout as `VALID`
-or one `INVALID: ...` line per error; diagnostics go to stderr. Exit status:
+nothing else to register it under. --reject-duplicate-members makes a
+duplicate object member name anywhere in the instance an INVALID verdict:
+JSON's grammar permits duplicates but parsers silently keep the last value,
+so no schema can ever see one -- parse time is the only tier that can check.
+The verdict is written to stdout as `VALID` or one `INVALID: ...` line per
+error; diagnostics go to stderr. Exit status:
 
     0  the instance is valid
-    1  the instance is invalid
-    2  error (bad arguments, unreadable file, malformed JSON, invalid schema,
-       unresolvable $ref, a --ref schema without $id)
+    1  the instance is invalid -- including an instance file that is not
+       valid JSON: the parse failure is a verdict about the submitted
+       document (its lowest grammar tier), not an operational error
+    2  error (bad arguments, unreadable file, schema or ref file with
+       malformed JSON, invalid schema, unresolvable $ref, a --ref schema
+       without $id)
 """
 import argparse
 import json
@@ -48,6 +56,63 @@ def load_json(path, role):
         die(f"cannot read {role} file {path}: {e.strerror}")
     except json.JSONDecodeError as e:
         die(f"{role} file {path} is not valid JSON: {e}")
+
+
+def read_instance_text(path):
+    try:
+        with open(path) as f:
+            return f.read()
+    except FileNotFoundError:
+        die(f"instance file not found: {path}")
+    except IsADirectoryError:
+        die(f"instance path is a directory: {path}")
+    except OSError as e:
+        die(f"cannot read instance file {path}: {e.strerror}")
+
+
+def parse_instance(text, reject_duplicates):
+    """Parse the instance, treating a parse failure as a verdict.
+
+    A document that was delivered but does not parse is invalid at the
+    lowest grammar tier -- JSON itself -- so the wrapper reports INVALID
+    (exit 1) with a uniform first phrase, the parser's own detail riding
+    behind it like any other library message. Only failing to read the
+    file at all is an operational error: everything about the instance is
+    a verdict; everything else is an error. The verdict is issued only
+    after the schema has been vetted, so a broken setup still exits 2.
+
+    With reject_duplicates, a duplicate object member name anywhere in the
+    instance is likewise a verdict. All duplicate names are collected,
+    deduplicated, and reported sorted, one line per name -- a deterministic
+    order shared with ajv-validate (whose scanner visits objects in textual
+    order where this hook visits them innermost-first), so the flag's
+    output is cross-validated word for word.
+    """
+    duplicates = set()
+
+    def note_duplicates(pairs):
+        seen = set()
+        obj = {}
+        for key, value in pairs:
+            if key in seen:
+                duplicates.add(key)
+            seen.add(key)
+            obj[key] = value
+        return obj
+
+    try:
+        instance = json.loads(
+            text, object_pairs_hook=note_duplicates if reject_duplicates else None)
+    except json.JSONDecodeError as e:
+        print(f"INVALID: instance is not valid JSON: {e}")
+        sys.exit(EXIT_INVALID)
+    if duplicates:
+        for name in sorted(duplicates):
+            # ensure_ascii=False so a non-ASCII name prints byte-identically
+            # with ajv-validate's JSON.stringify, keeping the line cross-validated.
+            print(f"INVALID: instance contains duplicate member name {json.dumps(name, ensure_ascii=False)}")
+        sys.exit(EXIT_INVALID)
+    return instance
 
 
 def location(error):
@@ -144,6 +209,9 @@ def parse_args(argv):
     parser.add_argument("-r", "--ref", action="append", default=[], metavar="FILE",
                         help="an additional schema file, registered under its "
                              "$id and available to $ref (repeatable)")
+    parser.add_argument("--reject-duplicate-members", action="store_true",
+                        help="report a duplicate object member name anywhere "
+                             "in the instance as an INVALID verdict")
     return parser.parse_args(argv[1:])
 
 
@@ -163,13 +231,15 @@ def load_ref_resources(paths):
 def main(argv):
     args = parse_args(argv)
     schema = load_json(args.schema, "schema")
-    instance = load_json(args.instance, "instance")
+    instance_text = read_instance_text(args.instance)
     registry = Registry().with_resources(load_ref_resources(args.ref))
 
     try:
         Draft202012Validator.check_schema(schema)
     except SchemaError as e:
         die(f"{args.schema} is not a valid JSON Schema: {e.message}")
+
+    instance = parse_instance(instance_text, args.reject_duplicate_members)
 
     # $ref targets are resolved lazily, during validation rather than by
     # check_schema, so an unresolvable one surfaces here and must be reported
