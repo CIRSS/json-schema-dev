@@ -22,11 +22,11 @@ judged -- and remains an error. The two probe pairs below differ in
 exactly one way: whether the named instance file exists.
 END_DOC
 
-show "the schema (vacuous)"                cat schema-any.json
+show "the schema (vacuous)"                cat schema-empty.json
 show "a truncated document"                cat instance-truncated.json
-show "jsonschema (Python): not JSON"       jsonschema-validate --schema schema-any.json --instance instance-truncated.json
-show "ajv (JavaScript): not JSON"          ajv-validate        --schema schema-any.json --instance instance-truncated.json
-show "jsonschema (Python): missing file"   jsonschema-validate --schema schema-any.json --instance no-such-file.json
-show "ajv (JavaScript): missing file"      ajv-validate        --schema schema-any.json --instance no-such-file.json
+show "jsonschema (Python): not JSON"       jsonschema-validate --schema schema-empty.json --instance instance-truncated.json
+show "ajv (JavaScript): not JSON"          ajv-validate        --schema schema-empty.json --instance instance-truncated.json
+show "jsonschema (Python): missing file"   jsonschema-validate --schema schema-empty.json --instance no-such-file.json
+show "ajv (JavaScript): missing file"      ajv-validate        --schema schema-empty.json --instance no-such-file.json
 
 exit 0

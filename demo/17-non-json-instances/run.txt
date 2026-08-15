@@ -21,7 +21,7 @@ exactly one way: whether the named instance file exists.
 
 ===== [2] the schema (vacuous) ===============================================
 
-$ cat schema-any.json
+$ cat schema-empty.json
 {}
 
 ===== [3] a truncated document ===============================================
@@ -31,20 +31,20 @@ $ cat instance-truncated.json
 
 ===== [4] jsonschema (Python): not JSON ======================================
 
-$ jsonschema-validate --schema schema-any.json --instance instance-truncated.json
+$ jsonschema-validate --schema schema-empty.json --instance instance-truncated.json
 INVALID: instance is not valid JSON: Expecting value: line 2 column 1 (char 6)
 
 ===== [5] ajv (JavaScript): not JSON =========================================
 
-$ ajv-validate --schema schema-any.json --instance instance-truncated.json
+$ ajv-validate --schema schema-empty.json --instance instance-truncated.json
 INVALID: instance is not valid JSON: Unexpected end of JSON input
 
 ===== [6] jsonschema (Python): missing file ==================================
 
-$ jsonschema-validate --schema schema-any.json --instance no-such-file.json
+$ jsonschema-validate --schema schema-empty.json --instance no-such-file.json
 jsonschema-validate: error: instance file not found: no-such-file.json
 
 ===== [7] ajv (JavaScript): missing file =====================================
 
-$ ajv-validate --schema schema-any.json --instance no-such-file.json
+$ ajv-validate --schema schema-empty.json --instance no-such-file.json
 ajv-validate: error: instance file not found: no-such-file.json
