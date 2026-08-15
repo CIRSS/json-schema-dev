@@ -1,6 +1,6 @@
 # json-schema-dev
 
-A [REPRO](https://github.com/repros-dev) capability module that bundles two JSON Schema validators and a gallery of minimal, runnable demonstrations of individual JSON Schema constructs. Each demo is one `(schema, instance)` pair validated through **both** validators; the committed `run.txt` golden file records — and asserts — that the two agree on the verdict. Re-run a demo and `git diff` its golden file to confirm.
+A [REPRO](https://github.com/repros-dev) capability module that bundles two JSON Schema validators and a gallery of minimal, runnable demonstrations of individual JSON Schema constructs. Each demo is one `(schema, instance)` pair validated through **both** validators; the committed `run.txt` golden file records the two verdicts side by side. Divergences in verdicts recorded in the golden files are expected and called out explicitly in the demo documentation cells. Re-run a demo and `git diff` its golden file to confirm that neither validator's behavior has changed since the golden was committed.
 
 ## Validators
 
