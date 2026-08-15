@@ -3,6 +3,7 @@
 //
 // Usage: ajv-validate --schema FILE --instance FILE [--ref FILE]...
 //                     [--reject-duplicate-members]
+//                     [--ignore-declared-version]
 //
 // Arguments are named, not positional, so the schema and instance cannot be
 // swapped by accident. Uses Ajv's 2020-12 build so the verdict is directly
@@ -13,9 +14,14 @@
 // it under. --reject-duplicate-members makes a duplicate object member name
 // anywhere in the instance an INVALID verdict: JSON's grammar permits
 // duplicates but parsers silently keep the last value, so no schema can ever
-// see one -- parse time is the only tier that can check. The verdict is
-// written to stdout as `VALID` or one `INVALID: ...` line per error;
-// diagnostics go to stderr. Exit status:
+// see one -- parse time is the only tier that can check. A schema (or ref
+// schema) whose top-level "$schema" entry names any version other than
+// 2020-12 is refused (exit 2): validating it under 2020-12 semantics could
+// silently change its meaning. --ignore-declared-version overrides the
+// refusal by discarding the declaration and validating as 2020-12 anyway --
+// an explicit choice, never a silent one. The verdict is written to stdout
+// as `VALID` or one `INVALID: ...` line per error; diagnostics go to
+// stderr. Exit status:
 //
 //     0  the instance is valid
 //     1  the instance is invalid -- including an instance file that is not
@@ -33,10 +39,11 @@ const ajvErrorsModule = require('ajv-errors');
 const ajvErrors = ajvErrorsModule.default || ajvErrorsModule;
 
 const PROG = 'ajv-validate';
-const USAGE = `usage: ${PROG} --schema FILE --instance FILE [--ref FILE]... [--reject-duplicate-members]`;
+const USAGE = `usage: ${PROG} --schema FILE --instance FILE [--ref FILE]... [--reject-duplicate-members] [--ignore-declared-version]`;
 const EXIT_VALID = 0;
 const EXIT_INVALID = 1;
 const EXIT_ERROR = 2;
+const SUPPORTED_VERSION_URI = 'https://json-schema.org/draft/2020-12/schema';
 
 function die(message) {
   process.stderr.write(`${PROG}: error: ${message}\n`);
@@ -72,6 +79,7 @@ function parseCli() {
         instance: { type: 'string', short: 'i' },
         ref: { type: 'string', short: 'r', multiple: true },
         'reject-duplicate-members': { type: 'boolean' },
+        'ignore-declared-version': { type: 'boolean' },
         help: { type: 'boolean', short: 'h' },
       },
       allowPositionals: false,
@@ -89,6 +97,28 @@ function parseCli() {
     process.exit(EXIT_ERROR);
   }
   return values;
+}
+
+// Honor or refuse a schema's declared JSON Schema version. A top-level
+// "$schema" entry naming any version other than 2020-12 is refused (exit
+// 2): the declaration states which semantics the schema was written for,
+// and validating under other semantics can silently change its meaning (a
+// draft-07 author's "definitions" and "dependencies" are ignored unknown
+// members under 2020-12). With ignoreDeclared, the declaration is
+// discarded and the schema validates as 2020-12 anyway -- the same
+// reinterpretation, but as an explicit choice. Declaring 2020-12, or
+// declaring nothing, passes through untouched.
+function checkDeclaredVersion(schema, path, ignoreDeclared) {
+  if (typeof schema !== 'object' || schema === null || !('$schema' in schema)) return;
+  const declared = schema.$schema;
+  if (declared === SUPPORTED_VERSION_URI) return;
+  if (ignoreDeclared) {
+    delete schema.$schema;
+    return;
+  }
+  die(`${path} declares JSON Schema version ${JSON.stringify(declared)}; ` +
+      `only 2020-12 is supported (pass --ignore-declared-version to ` +
+      `validate it as 2020-12 anyway)`);
 }
 
 // Collect every duplicate object member name in a JSON text. JSON.parse
@@ -159,6 +189,7 @@ function findDuplicateMembers(text) {
 function main() {
   const opts = parseCli();
   const schema = loadJson(opts.schema, 'schema');
+  checkDeclaredVersion(schema, opts.schema, opts['ignore-declared-version']);
   const instanceText = readText(opts.instance, 'instance');
 
   // Ajv's own notices (e.g. an unknown format being ignored) go through its
@@ -183,6 +214,7 @@ function main() {
   ajvErrors(ajv);
   for (const path of opts.ref ?? []) {
     const refSchema = loadJson(path, 'ref schema');
+    checkDeclaredVersion(refSchema, path, opts['ignore-declared-version']);
     if (typeof refSchema !== 'object' || refSchema === null || !refSchema.$id) {
       die(`ref schema file ${path} has no $id to register it under`);
     }

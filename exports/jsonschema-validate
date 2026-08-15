@@ -3,6 +3,7 @@
 
 Usage: jsonschema-validate --schema FILE --instance FILE [--ref FILE]...
                            [--reject-duplicate-members]
+                           [--ignore-declared-version]
 
 Arguments are named, not positional, so the schema and instance cannot be
 swapped by accident. The 2020-12 dialect is forced regardless of the schema's
@@ -14,6 +15,11 @@ nothing else to register it under. --reject-duplicate-members makes a
 duplicate object member name anywhere in the instance an INVALID verdict:
 JSON's grammar permits duplicates but parsers silently keep the last value,
 so no schema can ever see one -- parse time is the only tier that can check.
+A schema (or ref schema) whose top-level "$schema" entry names any version
+other than 2020-12 is refused (exit 2): validating it under 2020-12
+semantics could silently change its meaning. --ignore-declared-version
+overrides the refusal by discarding the declaration and validating as
+2020-12 anyway -- an explicit choice, never a silent one.
 The verdict is written to stdout as `VALID` or one `INVALID: ...` line per
 error; diagnostics go to stderr. Exit status:
 
@@ -37,6 +43,7 @@ from referencing.jsonschema import DRAFT202012
 
 PROG = "jsonschema-validate"
 EXIT_VALID, EXIT_INVALID, EXIT_ERROR = 0, 1, 2
+SUPPORTED_VERSION_URI = "https://json-schema.org/draft/2020-12/schema"
 
 
 def die(message):
@@ -56,6 +63,33 @@ def load_json(path, role):
         die(f"cannot read {role} file {path}: {e.strerror}")
     except json.JSONDecodeError as e:
         die(f"{role} file {path} is not valid JSON: {e}")
+
+
+def check_declared_version(schema, path, ignore_declared):
+    """Honor or refuse a schema's declared JSON Schema version.
+
+    A top-level "$schema" entry naming any version other than 2020-12 is
+    refused (exit 2): the declaration is the author's statement of which
+    semantics the schema was written for, and validating it under other
+    semantics can silently change its meaning (a draft-07 author's
+    "definitions" and "dependencies" are ignored unknown members under
+    2020-12). With ignore_declared, the declaration is discarded and the
+    schema is validated as 2020-12 anyway -- the same reinterpretation,
+    but as an explicit choice. Declaring 2020-12, or declaring nothing,
+    passes through untouched.
+    """
+    if not isinstance(schema, dict) or "$schema" not in schema:
+        return
+    declared = schema["$schema"]
+    if declared == SUPPORTED_VERSION_URI:
+        return
+    if ignore_declared:
+        del schema["$schema"]
+        return
+    die(f"{path} declares JSON Schema version "
+        f"{json.dumps(declared, ensure_ascii=False)}; only 2020-12 is "
+        f"supported (pass --ignore-declared-version to validate it as "
+        f"2020-12 anyway)")
 
 
 def read_instance_text(path):
@@ -212,13 +246,17 @@ def parse_args(argv):
     parser.add_argument("--reject-duplicate-members", action="store_true",
                         help="report a duplicate object member name anywhere "
                              "in the instance as an INVALID verdict")
+    parser.add_argument("--ignore-declared-version", action="store_true",
+                        help="discard a schema's declared JSON Schema "
+                             "version and validate as 2020-12 anyway")
     return parser.parse_args(argv[1:])
 
 
-def load_ref_resources(paths):
+def load_ref_resources(paths, ignore_declared):
     resources = []
     for path in paths:
         contents = load_json(path, "ref schema")
+        check_declared_version(contents, path, ignore_declared)
         if not isinstance(contents, dict) or "$id" not in contents:
             die(f"ref schema file {path} has no $id to register it under")
         resources.append(
@@ -231,8 +269,10 @@ def load_ref_resources(paths):
 def main(argv):
     args = parse_args(argv)
     schema = load_json(args.schema, "schema")
+    check_declared_version(schema, args.schema, args.ignore_declared_version)
     instance_text = read_instance_text(args.instance)
-    registry = Registry().with_resources(load_ref_resources(args.ref))
+    registry = Registry().with_resources(
+        load_ref_resources(args.ref, args.ignore_declared_version))
 
     try:
         Draft202012Validator.check_schema(schema)
