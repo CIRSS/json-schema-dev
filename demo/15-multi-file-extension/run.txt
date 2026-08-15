@@ -1,5 +1,5 @@
 
-===== a base schema in its own file, validating on its own ===================
+===== [1] a base schema in its own file, validating on its own ===============
 
 Everything so far lived in one file. This demo splits a schema across two:
 a base that stands alone, and an overlay that extends it. The base below
@@ -13,7 +13,7 @@ accepts all four — openness is not an oversight here but the property that
 makes the base extendable, and every verdict that follows is evidence of
 what the overlay adds, not something the base already did.
 
-===== the base schema ========================================================
+===== [2] the base schema ====================================================
 
 $ cat base.json
 {
@@ -23,67 +23,67 @@ $ cat base.json
   "required": ["id"]
 }
 
-===== the minimal record =====================================================
+===== [3] the minimal record =================================================
 
 $ cat instance-minimal.json
 {"id": "r1"}
 
-===== jsonschema (Python): base, minimal =====================================
+===== [4] jsonschema (Python): base, minimal =================================
 
 $ jsonschema-validate --schema base.json --instance instance-minimal.json
 VALID
 
-===== ajv (JavaScript): base, minimal ========================================
+===== [5] ajv (JavaScript): base, minimal ====================================
 
 $ ajv-validate --schema base.json --instance instance-minimal.json
 VALID
 
-===== with a stray member ====================================================
+===== [6] with a stray member ================================================
 
 $ cat instance-stray.json
 {"id": "r1", "note": "x"}
 
-===== jsonschema (Python): base, stray =======================================
+===== [7] jsonschema (Python): base, stray ===================================
 
 $ jsonschema-validate --schema base.json --instance instance-stray.json
 VALID
 
-===== ajv (JavaScript): base, stray ==========================================
+===== [8] ajv (JavaScript): base, stray ======================================
 
 $ ajv-validate --schema base.json --instance instance-stray.json
 VALID
 
-===== with a status ==========================================================
+===== [9] with a status ======================================================
 
 $ cat instance-full.json
 {"id": "r1", "status": "draft"}
 
-===== jsonschema (Python): base, status ======================================
+===== [10] jsonschema (Python): base, status =================================
 
 $ jsonschema-validate --schema base.json --instance instance-full.json
 VALID
 
-===== ajv (JavaScript): base, status =========================================
+===== [11] ajv (JavaScript): base, status ====================================
 
 $ ajv-validate --schema base.json --instance instance-full.json
 VALID
 
-===== with status and a stray member =========================================
+===== [12] with status and a stray member ====================================
 
 $ cat instance-full-stray.json
 {"id": "r1", "status": "draft", "note": "x"}
 
-===== jsonschema (Python): base, both ========================================
+===== [13] jsonschema (Python): base, both ===================================
 
 $ jsonschema-validate --schema base.json --instance instance-full-stray.json
 VALID
 
-===== ajv (JavaScript): base, both ===========================================
+===== [14] ajv (JavaScript): base, both ======================================
 
 $ ajv-validate --schema base.json --instance instance-full-stray.json
 VALID
 
-===== an overlay that extends the base and closes over the union =============
+===== [15] an overlay that extends the base and closes over the union ========
 
 The overlay references the base by its $id (demo 12), adds its own
 requirement under allOf (demo 11), and closes the whole with
@@ -100,7 +100,7 @@ base file is untouched, still open, and still valid on its own. That is
 the extension contract: a base schema usable standalone, and stricter
 profiles layered on it by reference, each in its own file.
 
-===== the overlay schema =====================================================
+===== [16] the overlay schema ================================================
 
 $ cat overlay.json
 {
@@ -111,49 +111,49 @@ $ cat overlay.json
   "unevaluatedProperties": false
 }
 
-===== jsonschema (Python): overlay, minimal ==================================
+===== [17] jsonschema (Python): overlay, minimal =============================
 
 $ jsonschema-validate --schema overlay.json --ref base.json --instance instance-minimal.json
 INVALID: 'status' is a required property
 
-===== ajv (JavaScript): overlay, minimal =====================================
+===== [18] ajv (JavaScript): overlay, minimal ================================
 
 $ ajv-validate --schema overlay.json --ref base.json --instance instance-minimal.json
 INVALID: must have required property 'status'
 
-===== jsonschema (Python): overlay, stray ====================================
+===== [19] jsonschema (Python): overlay, stray ===============================
 
 $ jsonschema-validate --schema overlay.json --ref base.json --instance instance-stray.json
 INVALID: 'status' is a required property
 INVALID: Unevaluated properties are not allowed ('note' was unexpected)
 
-===== ajv (JavaScript): overlay, stray =======================================
+===== [20] ajv (JavaScript): overlay, stray ==================================
 
 $ ajv-validate --schema overlay.json --ref base.json --instance instance-stray.json
 INVALID: must have required property 'status'
 INVALID: must NOT have unevaluated properties
 
-===== jsonschema (Python): overlay, status ===================================
+===== [21] jsonschema (Python): overlay, status ==============================
 
 $ jsonschema-validate --schema overlay.json --ref base.json --instance instance-full.json
 VALID
 
-===== ajv (JavaScript): overlay, status ======================================
+===== [22] ajv (JavaScript): overlay, status =================================
 
 $ ajv-validate --schema overlay.json --ref base.json --instance instance-full.json
 VALID
 
-===== jsonschema (Python): overlay, both =====================================
+===== [23] jsonschema (Python): overlay, both ================================
 
 $ jsonschema-validate --schema overlay.json --ref base.json --instance instance-full-stray.json
 INVALID: Unevaluated properties are not allowed ('note' was unexpected)
 
-===== ajv (JavaScript): overlay, both ========================================
+===== [24] ajv (JavaScript): overlay, both ===================================
 
 $ ajv-validate --schema overlay.json --ref base.json --instance instance-full-stray.json
 INVALID: must NOT have unevaluated properties
 
-===== the overlay is not self-contained, and says so =========================
+===== [25] the overlay is not self-contained, and says so ====================
 
 One last run, differing from the passing case in one way: the --ref is
 omitted. Both validators refuse — an error, not a verdict — because the
@@ -162,12 +162,12 @@ different moments (demo 11): Ajv while compiling, jsonschema during
 validation. A multi-file schema is a set of files that must travel
 together, and the error is the reminder.
 
-===== jsonschema (Python): overlay without --ref =============================
+===== [26] jsonschema (Python): overlay without --ref ========================
 
 $ jsonschema-validate --schema overlay.json --instance instance-full.json
 jsonschema-validate: error: overlay.json contains an unresolvable $ref: Unresolvable: https://example.org/schemas/record
 
-===== ajv (JavaScript): overlay without --ref ================================
+===== [27] ajv (JavaScript): overlay without --ref ===========================
 
 $ ajv-validate --schema overlay.json --instance instance-full.json
 ajv-validate: error: overlay.json is not a valid JSON Schema: can't resolve reference https://example.org/schemas/record from id https://example.org/schemas/record-strict

@@ -1,5 +1,5 @@
 
-===== a discriminator property selects which constraints apply ===============
+===== [1] a discriminator property selects which constraints apply ===========
 
 Records that come in variants usually carry a tag naming which variant this
 is — here, kind — with the rest of the record's shape depending on it.
@@ -10,7 +10,7 @@ a radius of circles and a side of everything else.
 The three instances vary one thing at a time: a circle with its radius, a
 circle carrying a side instead, and a square with its side.
 
-===== the schema (circles need radius, others side) ==========================
+===== [2] the schema (circles need radius, others side) ======================
 
 $ cat schema-union.json
 {
@@ -19,53 +19,53 @@ $ cat schema-union.json
   "else": { "required": ["side"] }
 }
 
-===== a circle with a radius =================================================
+===== [3] a circle with a radius =============================================
 
 $ cat instance-circle.json
 {"kind": "circle", "radius": 1}
 
-===== jsonschema (Python): circle ============================================
+===== [4] jsonschema (Python): circle ========================================
 
 $ jsonschema-validate --schema schema-union.json --instance instance-circle.json
 VALID
 
-===== ajv (JavaScript): circle ===============================================
+===== [5] ajv (JavaScript): circle ===========================================
 
 $ ajv-validate --schema schema-union.json --instance instance-circle.json
 VALID
 
-===== a circle with a side instead ===========================================
+===== [6] a circle with a side instead =======================================
 
 $ cat instance-circle-side.json
 {"kind": "circle", "side": 4}
 
-===== jsonschema (Python): circle with side ==================================
+===== [7] jsonschema (Python): circle with side ==============================
 
 $ jsonschema-validate --schema schema-union.json --instance instance-circle-side.json
 INVALID: 'radius' is a required property
 
-===== ajv (JavaScript): circle with side =====================================
+===== [8] ajv (JavaScript): circle with side =================================
 
 $ ajv-validate --schema schema-union.json --instance instance-circle-side.json
 INVALID: must have required property 'radius'
 INVALID: must match "then" schema
 
-===== a square with a side ===================================================
+===== [9] a square with a side ===============================================
 
 $ cat instance-square.json
 {"kind": "square", "side": 4}
 
-===== jsonschema (Python): square ============================================
+===== [10] jsonschema (Python): square =======================================
 
 $ jsonschema-validate --schema schema-union.json --instance instance-square.json
 VALID
 
-===== ajv (JavaScript): square ===============================================
+===== [11] ajv (JavaScript): square ==========================================
 
 $ ajv-validate --schema schema-union.json --instance instance-square.json
 VALID
 
-===== the if schema must require its own discriminator =======================
+===== [12] the if schema must require its own discriminator ==================
 
 The trap in this construct comes from demo 02: properties does not make a
 property required, and that holds inside an if schema too. The two schemas
@@ -79,7 +79,7 @@ rejected for lacking a radius it was never obliged to have. With it, the if
 fails, no branch applies, and the empty object passes — deciding nothing
 about records that do not claim to be circles.
 
-===== if without required kind ===============================================
+===== [13] if without required kind ==========================================
 
 $ cat schema-loose-if.json
 {
@@ -87,7 +87,7 @@ $ cat schema-loose-if.json
   "then": { "required": ["radius"] }
 }
 
-===== if with required kind ==================================================
+===== [14] if with required kind =============================================
 
 $ cat schema-strict-if.json
 {
@@ -95,28 +95,28 @@ $ cat schema-strict-if.json
   "then": { "required": ["radius"] }
 }
 
-===== the empty object =======================================================
+===== [15] the empty object ==================================================
 
 $ cat instance-empty.json
 {}
 
-===== jsonschema (Python): loose if ==========================================
+===== [16] jsonschema (Python): loose if =====================================
 
 $ jsonschema-validate --schema schema-loose-if.json --instance instance-empty.json
 INVALID: 'radius' is a required property
 
-===== ajv (JavaScript): loose if =============================================
+===== [17] ajv (JavaScript): loose if ========================================
 
 $ ajv-validate --schema schema-loose-if.json --instance instance-empty.json
 INVALID: must have required property 'radius'
 INVALID: must match "then" schema
 
-===== jsonschema (Python): strict if =========================================
+===== [18] jsonschema (Python): strict if ====================================
 
 $ jsonschema-validate --schema schema-strict-if.json --instance instance-empty.json
 VALID
 
-===== ajv (JavaScript): strict if ============================================
+===== [19] ajv (JavaScript): strict if =======================================
 
 $ ajv-validate --schema schema-strict-if.json --instance instance-empty.json
 VALID

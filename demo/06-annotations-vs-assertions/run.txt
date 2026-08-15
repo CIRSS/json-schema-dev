@@ -1,5 +1,5 @@
 
-===== two kinds of keyword ===================================================
+===== [1] two kinds of keyword ===============================================
 
 JSON Schema keywords divide into assertions, which can make an instance
 invalid, and annotations, which cannot. An annotation attaches information
@@ -11,7 +11,7 @@ assertions in the same object, spelled the same way, and a schema full of
 them looks more rigorous than the same schema without. Nothing warns you
 that half of what you wrote is inert.
 
-===== title, description and $comment assert nothing =========================
+===== [2] title, description and $comment assert nothing =====================
 
 The schema below says in three separate places that the value is a number
 and must not be a string. Then it asserts "type": "string".
@@ -24,7 +24,7 @@ claim about the instance in the first place.
 This is what makes a stale description worse than none: it reads as
 constraint and behaves as a comment.
 
-===== a schema whose prose disagrees with it =================================
+===== [3] a schema whose prose disagrees with it =============================
 
 $ cat schema-annotated.json
 {
@@ -34,22 +34,22 @@ $ cat schema-annotated.json
   "type": "string"
 }
 
-===== the instance ===========================================================
+===== [4] the instance =======================================================
 
 $ cat instance-string.json
 "a string, not a number"
 
-===== jsonschema (Python): annotated schema ==================================
+===== [5] jsonschema (Python): annotated schema ==============================
 
 $ jsonschema-validate --schema schema-annotated.json --instance instance-string.json
 VALID
 
-===== ajv (JavaScript): annotated schema =====================================
+===== [6] ajv (JavaScript): annotated schema =================================
 
 $ ajv-validate --schema schema-annotated.json --instance instance-string.json
 VALID
 
-===== format is an annotation too, by default ================================
+===== [7] format is an annotation too, by default ============================
 
 This is the one that surprises people, because format looks exactly like a
 constraint and is usually written as one. In the 2020-12 specification,
@@ -67,12 +67,12 @@ only one tells you the constraint you wrote is doing nothing.
 The rule that follows: if something must be enforced, write it as a
 pattern. Use format to say what a value means, never to make it so.
 
-===== the instance ===========================================================
+===== [8] the instance =======================================================
 
 $ cat instance-not-an-email.json
 "definitely not an email address"
 
-===== the rule written as a format ===========================================
+===== [9] the rule written as a format =======================================
 
 $ cat schema-format.json
 {
@@ -80,18 +80,18 @@ $ cat schema-format.json
   "format": "email"
 }
 
-===== jsonschema (Python): format email ======================================
+===== [10] jsonschema (Python): format email =================================
 
 $ jsonschema-validate --schema schema-format.json --instance instance-not-an-email.json
 VALID
 
-===== ajv (JavaScript): format email =========================================
+===== [11] ajv (JavaScript): format email ====================================
 
 $ ajv-validate --schema schema-format.json --instance instance-not-an-email.json
 ajv-validate: warning: unknown format "email" ignored in schema at path "#"
 VALID
 
-===== the rule written as a pattern ==========================================
+===== [12] the rule written as a pattern =====================================
 
 $ cat schema-pattern.json
 {
@@ -99,12 +99,12 @@ $ cat schema-pattern.json
   "pattern": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$"
 }
 
-===== jsonschema (Python): pattern ===========================================
+===== [13] jsonschema (Python): pattern ======================================
 
 $ jsonschema-validate --schema schema-pattern.json --instance instance-not-an-email.json
 INVALID: 'definitely not an email address' does not match '^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$'
 
-===== ajv (JavaScript): pattern ==============================================
+===== [14] ajv (JavaScript): pattern =========================================
 
 $ ajv-validate --schema schema-pattern.json --instance instance-not-an-email.json
 INVALID: must match pattern "^[^@\s]+@[^@\s]+\.[^@\s]+$"

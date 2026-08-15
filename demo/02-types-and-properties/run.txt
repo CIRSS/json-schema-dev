@@ -1,47 +1,47 @@
 
-===== type asserts what kind of value the instance is ========================
+===== [1] type asserts what kind of value the instance is ====================
 
 The previous demo showed that {} accepts everything. Constraining anything
 starts with type: the schema below adds one keyword, and instances now
 divide into the kind it names and everything else. The two instances that
 follow differ only in kind — one is an object, one is a string.
 
-===== the schema (type object) ===============================================
+===== [2] the schema (type object) ===========================================
 
 $ cat schema-type.json
 {"type": "object"}
 
-===== an object ==============================================================
+===== [3] an object ==========================================================
 
 $ cat instance-object.json
 {"a": 1}
 
-===== jsonschema (Python): object ============================================
+===== [4] jsonschema (Python): object ========================================
 
 $ jsonschema-validate --schema schema-type.json --instance instance-object.json
 VALID
 
-===== ajv (JavaScript): object ===============================================
+===== [5] ajv (JavaScript): object ===========================================
 
 $ ajv-validate --schema schema-type.json --instance instance-object.json
 VALID
 
-===== a string ===============================================================
+===== [6] a string ===========================================================
 
 $ cat instance-string.json
 "hello"
 
-===== jsonschema (Python): string ============================================
+===== [7] jsonschema (Python): string ========================================
 
 $ jsonschema-validate --schema schema-type.json --instance instance-string.json
 INVALID: 'hello' is not of type 'object'
 
-===== ajv (JavaScript): string ===============================================
+===== [8] ajv (JavaScript): string ===========================================
 
 $ ajv-validate --schema schema-type.json --instance instance-string.json
 INVALID: must be object
 
-===== properties constrains the shape of a named member ======================
+===== [9] properties constrains the shape of a named member ==================
 
 The second schema adds a properties entry: the member a, if present, must
 be a number. The two instances below differ only in the value of a. This is
@@ -49,7 +49,7 @@ how nearly every real schema is built — an object type with a properties
 map — and each entry in the map is itself a schema, a point later demos
 return to.
 
-===== the schema (a must be a number) ========================================
+===== [10] the schema (a must be a number) ===================================
 
 $ cat schema-properties.json
 {
@@ -57,37 +57,37 @@ $ cat schema-properties.json
   "properties": { "a": { "type": "number" } }
 }
 
-===== a is a number ==========================================================
+===== [11] a is a number =====================================================
 
 $ cat instance-object.json
 {"a": 1}
 
-===== jsonschema (Python): a is a number =====================================
+===== [12] jsonschema (Python): a is a number ================================
 
 $ jsonschema-validate --schema schema-properties.json --instance instance-object.json
 VALID
 
-===== ajv (JavaScript): a is a number ========================================
+===== [13] ajv (JavaScript): a is a number ===================================
 
 $ ajv-validate --schema schema-properties.json --instance instance-object.json
 VALID
 
-===== a is a string ==========================================================
+===== [14] a is a string =====================================================
 
 $ cat instance-wrong-type.json
 {"a": "x"}
 
-===== jsonschema (Python): a is a string =====================================
+===== [15] jsonschema (Python): a is a string ================================
 
 $ jsonschema-validate --schema schema-properties.json --instance instance-wrong-type.json
 INVALID: /a: 'x' is not of type 'number'
 
-===== ajv (JavaScript): a is a string ========================================
+===== [16] ajv (JavaScript): a is a string ===================================
 
 $ ajv-validate --schema schema-properties.json --instance instance-wrong-type.json
 INVALID: /a: must be number
 
-===== what properties does not do ============================================
+===== [17] what properties does not do =======================================
 
 Two more instances against the same schema. The first omits a entirely; the
 second carries an extra member the schema never mentions. Both pass.
@@ -98,32 +98,32 @@ forbids keys it does not list (closing a schema is its own construct, taken
 up in demo 13). A schema built from type and properties alone describes
 shapes, and only shapes.
 
-===== a omitted ==============================================================
+===== [18] a omitted =========================================================
 
 $ cat instance-empty.json
 {}
 
-===== jsonschema (Python): a omitted =========================================
+===== [19] jsonschema (Python): a omitted ====================================
 
 $ jsonschema-validate --schema schema-properties.json --instance instance-empty.json
 VALID
 
-===== ajv (JavaScript): a omitted ============================================
+===== [20] ajv (JavaScript): a omitted =======================================
 
 $ ajv-validate --schema schema-properties.json --instance instance-empty.json
 VALID
 
-===== an undeclared extra member =============================================
+===== [21] an undeclared extra member ========================================
 
 $ cat instance-extra.json
 {"a": 1, "b": 2}
 
-===== jsonschema (Python): extra member ======================================
+===== [22] jsonschema (Python): extra member =================================
 
 $ jsonschema-validate --schema schema-properties.json --instance instance-extra.json
 VALID
 
-===== ajv (JavaScript): extra member =========================================
+===== [23] ajv (JavaScript): extra member ====================================
 
 $ ajv-validate --schema schema-properties.json --instance instance-extra.json
 VALID

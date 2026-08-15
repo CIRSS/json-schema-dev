@@ -1,5 +1,5 @@
 
-===== how far does closure reach? ============================================
+===== [1] how far does closure reach? ========================================
 
 Demo 13 showed unevaluatedProperties: false closing an object over allOf.
 That raises the question this demo answers: how far does "evaluated" reach?
@@ -12,7 +12,7 @@ reaches further sideways than expected, through $ref into a named $def. It
 reaches less far downward than expected — not at all, in fact, into a
 nested object.
 
-===== sideways: through $ref =================================================
+===== [2] sideways: through $ref =============================================
 
 $defs holds named subschemas and $ref invokes one — the closest thing JSON
 Schema has to a named production. The two schemas below are identical
@@ -29,14 +29,14 @@ This is what makes unevaluatedProperties the keyword that composes. A
 schema built from named parts can only be closed by something that can see
 what the parts claimed.
 
-===== the instance ===========================================================
+===== [3] the instance =======================================================
 
 $ cat instance.json
 {
   "a": "hello"
 }
 
-===== closing with unevaluatedProperties =====================================
+===== [4] closing with unevaluatedProperties =================================
 
 $ cat schema-unevaluated.json
 {
@@ -50,17 +50,17 @@ $ cat schema-unevaluated.json
   "unevaluatedProperties": false
 }
 
-===== jsonschema (Python): unevaluatedProperties =============================
+===== [5] jsonschema (Python): unevaluatedProperties =========================
 
 $ jsonschema-validate --schema schema-unevaluated.json --instance instance.json
 VALID
 
-===== ajv (JavaScript): unevaluatedProperties ================================
+===== [6] ajv (JavaScript): unevaluatedProperties ============================
 
 $ ajv-validate --schema schema-unevaluated.json --instance instance.json
 VALID
 
-===== closing with additionalProperties ======================================
+===== [7] closing with additionalProperties ==================================
 
 $ cat schema-additional.json
 {
@@ -74,17 +74,17 @@ $ cat schema-additional.json
   "additionalProperties": false
 }
 
-===== jsonschema (Python): additionalProperties ==============================
+===== [8] jsonschema (Python): additionalProperties ==========================
 
 $ jsonschema-validate --schema schema-additional.json --instance instance.json
 INVALID: Additional properties are not allowed ('a' was unexpected)
 
-===== ajv (JavaScript): additionalProperties =================================
+===== [9] ajv (JavaScript): additionalProperties =============================
 
 $ ajv-validate --schema schema-additional.json --instance instance.json
 INVALID: must NOT have additional properties
 
-===== downward: not at all ===================================================
+===== [10] downward: not at all ==============================================
 
 The other direction is the one that costs people data. unevaluatedProperties
 at the root closes the root object and nothing beneath it. A nested object
@@ -101,14 +101,14 @@ be explained by the closure not working at all. The pair is what locates
 the effect — same instance, same root closure, verdict turning solely on
 where the inner closure is declared.
 
-===== the instance ===========================================================
+===== [11] the instance ======================================================
 
 $ cat instance-nested.json
 {
   "inner": { "x": 1, "y": 2 }
 }
 
-===== root closed, inner open ================================================
+===== [12] root closed, inner open ===========================================
 
 $ cat schema-nested.json
 {
@@ -122,17 +122,17 @@ $ cat schema-nested.json
   "unevaluatedProperties": false
 }
 
-===== jsonschema (Python): inner open ========================================
+===== [13] jsonschema (Python): inner open ===================================
 
 $ jsonschema-validate --schema schema-nested.json --instance instance-nested.json
 VALID
 
-===== ajv (JavaScript): inner open ===========================================
+===== [14] ajv (JavaScript): inner open ======================================
 
 $ ajv-validate --schema schema-nested.json --instance instance-nested.json
 VALID
 
-===== root closed, inner closed too ==========================================
+===== [15] root closed, inner closed too =====================================
 
 $ cat schema-nested-closed.json
 {
@@ -147,17 +147,17 @@ $ cat schema-nested-closed.json
   "unevaluatedProperties": false
 }
 
-===== jsonschema (Python): inner closed ======================================
+===== [16] jsonschema (Python): inner closed =================================
 
 $ jsonschema-validate --schema schema-nested-closed.json --instance instance-nested.json
 INVALID: /inner: Unevaluated properties are not allowed ('y' was unexpected)
 
-===== ajv (JavaScript): inner closed =========================================
+===== [17] ajv (JavaScript): inner closed ====================================
 
 $ ajv-validate --schema schema-nested-closed.json --instance instance-nested.json
 INVALID: /inner: must NOT have unevaluated properties
 
-===== so closure is a per-object obligation ==================================
+===== [18] so closure is a per-object obligation =============================
 
 Not a document-wide switch. Every nested object that should be closed has
 to say so where it is defined, and the top level looking closed is exactly

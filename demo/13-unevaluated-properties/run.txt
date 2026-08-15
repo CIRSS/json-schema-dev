@@ -1,5 +1,5 @@
 
-===== unevaluatedProperties closes over allOf ================================
+===== [1] unevaluatedProperties closes over allOf ============================
 
 An object schema is "closed" when it rejects properties it did not declare.
 The obvious way to close one is additionalProperties: false — but that
@@ -17,7 +17,7 @@ introduced in 2019-09: a draft-07 validator does not know it, and unknown
 keywords are ignored rather than rejected, so the same schema silently
 fails open — the invalid instance would pass.
 
-===== the schema =============================================================
+===== [2] the schema =========================================================
 
 $ cat schema.json
 {
@@ -29,13 +29,13 @@ $ cat schema.json
   "unevaluatedProperties": false
 }
 
-===== what to watch for ======================================================
+===== [3] what to watch for ==================================================
 
 Property "c" appears in no allOf branch. The valid instance omits it and
 passes; the invalid instance carries it and is rejected by both validators,
 in different words but with the same verdict.
 
-===== the valid instance =====================================================
+===== [4] the valid instance =================================================
 
 $ cat instance-valid.json
 {
@@ -43,17 +43,17 @@ $ cat instance-valid.json
   "b": "world"
 }
 
-===== jsonschema (Python): valid instance ====================================
+===== [5] jsonschema (Python): valid instance ================================
 
 $ jsonschema-validate --schema schema.json --instance instance-valid.json
 VALID
 
-===== ajv (JavaScript): valid instance =======================================
+===== [6] ajv (JavaScript): valid instance ===================================
 
 $ ajv-validate --schema schema.json --instance instance-valid.json
 VALID
 
-===== the invalid instance ===================================================
+===== [7] the invalid instance ===============================================
 
 $ cat instance-invalid.json
 {
@@ -62,17 +62,17 @@ $ cat instance-invalid.json
   "c": "unexpected"
 }
 
-===== jsonschema (Python): invalid instance ==================================
+===== [8] jsonschema (Python): invalid instance ==============================
 
 $ jsonschema-validate --schema schema.json --instance instance-invalid.json
 INVALID: Unevaluated properties are not allowed ('c' was unexpected)
 
-===== ajv (JavaScript): invalid instance =====================================
+===== [9] ajv (JavaScript): invalid instance =================================
 
 $ ajv-validate --schema schema.json --instance instance-invalid.json
 INVALID: must NOT have unevaluated properties
 
-===== what if a or b is left out? ============================================
+===== [10] what if a or b is left out? =======================================
 
 Nothing rejects them. unevaluatedProperties governs which properties may
 appear, not which must — and properties is likewise a conditional: it says
@@ -89,34 +89,34 @@ schema with no required is closed and empty-able at the same time, which is
 almost never what the author meant. See demo 04 for the same trap without
 the composition.
 
-===== only a =================================================================
+===== [11] only a ============================================================
 
 $ cat instance-only-a.json
 {
   "a": "hello"
 }
 
-===== jsonschema (Python): only a ============================================
+===== [12] jsonschema (Python): only a =======================================
 
 $ jsonschema-validate --schema schema.json --instance instance-only-a.json
 VALID
 
-===== ajv (JavaScript): only a ===============================================
+===== [13] ajv (JavaScript): only a ==========================================
 
 $ ajv-validate --schema schema.json --instance instance-only-a.json
 VALID
 
-===== neither a nor b ========================================================
+===== [14] neither a nor b ===================================================
 
 $ cat instance-empty.json
 {}
 
-===== jsonschema (Python): neither a nor b ===================================
+===== [15] jsonschema (Python): neither a nor b ==============================
 
 $ jsonschema-validate --schema schema.json --instance instance-empty.json
 VALID
 
-===== ajv (JavaScript): neither a nor b ======================================
+===== [16] ajv (JavaScript): neither a nor b =================================
 
 $ ajv-validate --schema schema.json --instance instance-empty.json
 VALID

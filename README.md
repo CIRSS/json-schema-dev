@@ -50,6 +50,8 @@ Where the two validators genuinely diverge — from library behavior, host-langu
 
 Each demo's `run.sh` is a small shell notebook built from two cell helpers defined in [`demo/cells.sh`](demo/cells.sh): `doc`, which prints a prose cell from a heredoc, and `show`, which prints a command and its output. The prose is therefore part of the captured `run.txt`, so a golden file reads as a self-contained lesson — what the construct does and when to reach for it, followed by the evidence — rather than a bare transcript.
 
+Cells are numbered in their banners (`===== [5] …`), so a golden doubles as the demo's cell index, and `run.sh` accepts a cell selection for interactive experiments: each argument is a cell number or an inclusive range, freely mixed — `bash run.sh 5`, `bash run.sh 1 2 3`, `bash run.sh 2 5-8 12` — while `bash run.sh` alone runs every cell (the form the goldens record). Cells always run in document order whatever the argument order. Selection assumes cells are independent — a demo must not let one cell depend on another's side effects.
+
 ## Build and run
 
 The parent image adds Python (via `apt`) and a pinned Node (official prebuilt binary) to the published framework base, so it builds from nothing local; the demo runner (via `shell-notebook`) is composed at build time.

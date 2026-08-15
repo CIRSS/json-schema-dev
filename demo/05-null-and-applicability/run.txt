@@ -1,5 +1,5 @@
 
-===== most keywords do not apply to most instances ===========================
+===== [1] most keywords do not apply to most instances =======================
 
 Validation keywords are type-scoped. minLength constrains strings, minimum
 constrains numbers, minItems constrains arrays — and each is simply silent
@@ -19,7 +19,7 @@ which is exactly the misreading the rule punishes.
 Demo 04 covers the related trap on the other side — that a null-valued
 property still satisfies required.
 
-===== null is a type, and there is no nullable keyword =======================
+===== [2] null is a type, and there is no nullable keyword ===================
 
 JSON Schema has no nullable modifier. Permitting null is done by naming it
 in type, which takes either one type name or a list of them. The two
@@ -28,42 +28,42 @@ schemas below differ in that list and nothing else.
 (OpenAPI 3.0 did have nullable: true, which is where the expectation comes
 from; 3.1 dropped it in favour of this form.)
 
-===== the instance ===========================================================
+===== [3] the instance =======================================================
 
 $ cat instance-null.json
 null
 
-===== type is string =========================================================
+===== [4] type is string =====================================================
 
 $ cat schema-string.json
 { "type": "string" }
 
-===== jsonschema (Python): null vs string ====================================
+===== [5] jsonschema (Python): null vs string ================================
 
 $ jsonschema-validate --schema schema-string.json --instance instance-null.json
 INVALID: None is not of type 'string'
 
-===== ajv (JavaScript): null vs string =======================================
+===== [6] ajv (JavaScript): null vs string ===================================
 
 $ ajv-validate --schema schema-string.json --instance instance-null.json
 INVALID: must be string
 
-===== type is string or null =================================================
+===== [7] type is string or null =============================================
 
 $ cat schema-nullable.json
 { "type": ["string", "null"] }
 
-===== jsonschema (Python): null vs string-or-null ============================
+===== [8] jsonschema (Python): null vs string-or-null ========================
 
 $ jsonschema-validate --schema schema-nullable.json --instance instance-null.json
 VALID
 
-===== ajv (JavaScript): null vs string-or-null ===============================
+===== [9] ajv (JavaScript): null vs string-or-null ===========================
 
 $ ajv-validate --schema schema-nullable.json --instance instance-null.json
 VALID
 
-===== making a field nullable exempts it from its own constraints ============
+===== [10] making a field nullable exempts it from its own constraints =======
 
 Now add a length constraint to that nullable field. One schema, three
 instances: a string that is too short, a string that is long enough, and
@@ -78,57 +78,57 @@ The lesson is not "avoid null." It is that widening a type widens what the
 type-scoped keywords decline to examine, and nothing in the schema records
 that you meant those constraints to bind.
 
-===== a nullable string of at least 5 characters =============================
+===== [11] a nullable string of at least 5 characters ========================
 
 $ cat schema-nullable-minlength.json
 { "type": ["string", "null"], "minLength": 5 }
 
-===== a string that is too short =============================================
+===== [12] a string that is too short ========================================
 
 $ cat instance-short.json
 "hi"
 
-===== jsonschema (Python): short string ======================================
+===== [13] jsonschema (Python): short string =================================
 
 $ jsonschema-validate --schema schema-nullable-minlength.json --instance instance-short.json
 INVALID: 'hi' is too short
 
-===== ajv (JavaScript): short string =========================================
+===== [14] ajv (JavaScript): short string ====================================
 
 $ ajv-validate --schema schema-nullable-minlength.json --instance instance-short.json
 INVALID: must NOT have fewer than 5 characters
 
-===== a string that is long enough ===========================================
+===== [15] a string that is long enough ======================================
 
 $ cat instance-long.json
 "hello there"
 
-===== jsonschema (Python): long string =======================================
+===== [16] jsonschema (Python): long string ==================================
 
 $ jsonschema-validate --schema schema-nullable-minlength.json --instance instance-long.json
 VALID
 
-===== ajv (JavaScript): long string ==========================================
+===== [17] ajv (JavaScript): long string =====================================
 
 $ ajv-validate --schema schema-nullable-minlength.json --instance instance-long.json
 VALID
 
-===== null again =============================================================
+===== [18] null again ========================================================
 
 $ cat instance-null.json
 null
 
-===== jsonschema (Python): null ==============================================
+===== [19] jsonschema (Python): null =========================================
 
 $ jsonschema-validate --schema schema-nullable-minlength.json --instance instance-null.json
 VALID
 
-===== ajv (JavaScript): null =================================================
+===== [20] ajv (JavaScript): null ============================================
 
 $ ajv-validate --schema schema-nullable-minlength.json --instance instance-null.json
 VALID
 
-===== not every keyword is type-scoped =======================================
+===== [21] not every keyword is type-scoped ==================================
 
 The rule has an important exception, and the two schemas below make it
 visible against the same instance.
@@ -143,32 +143,32 @@ restricts null. Knowing which family a keyword belongs to — value
 comparison or type-scoped assertion — is what tells you whether it will
 hold when an unexpected type arrives.
 
-===== an enumeration of two strings ==========================================
+===== [22] an enumeration of two strings =====================================
 
 $ cat schema-enum.json
 { "enum": ["x", "y"] }
 
-===== jsonschema (Python): null vs enum ======================================
+===== [23] jsonschema (Python): null vs enum =================================
 
 $ jsonschema-validate --schema schema-enum.json --instance instance-null.json
 INVALID: None is not one of ['x', 'y']
 
-===== ajv (JavaScript): null vs enum =========================================
+===== [24] ajv (JavaScript): null vs enum ====================================
 
 $ ajv-validate --schema schema-enum.json --instance instance-null.json
 INVALID: must be equal to one of the allowed values
 
-===== a numeric lower bound ==================================================
+===== [25] a numeric lower bound =============================================
 
 $ cat schema-minimum.json
 { "minimum": 5 }
 
-===== jsonschema (Python): null vs minimum ===================================
+===== [26] jsonschema (Python): null vs minimum ==============================
 
 $ jsonschema-validate --schema schema-minimum.json --instance instance-null.json
 VALID
 
-===== ajv (JavaScript): null vs minimum ======================================
+===== [27] ajv (JavaScript): null vs minimum =================================
 
 $ ajv-validate --schema schema-minimum.json --instance instance-null.json
 VALID

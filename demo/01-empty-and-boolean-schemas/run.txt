@@ -1,5 +1,5 @@
 
-===== a schema need not be an object =========================================
+===== [1] a schema need not be an object =====================================
 
 JSON Schema defines a schema as either an object or a boolean. The two
 booleans are the degenerate ends of the lattice: true accepts every
@@ -22,89 +22,89 @@ claim about everything is poorly served by a single example — two unlike
 instances agreeing is what makes "regardless" visible. Neither instance is
 the subject here; the schema is the only thing whose meaning is at stake.
 
-===== the first instance =====================================================
+===== [2] the first instance =================================================
 
 $ cat instance.json
 {
   "a": 1
 }
 
-===== the second instance ====================================================
+===== [3] the second instance ================================================
 
 $ cat instance-null.json
 null
 
-===== empty schema (accepts anything) ========================================
+===== [4] empty schema (accepts anything) ====================================
 
 $ cat schema-any.json
 {}
 
-===== jsonschema (Python): object vs {} ======================================
+===== [5] jsonschema (Python): object vs {} ==================================
 
 $ jsonschema-validate --schema schema-any.json --instance instance.json
 VALID
 
-===== ajv (JavaScript): object vs {} =========================================
+===== [6] ajv (JavaScript): object vs {} =====================================
 
 $ ajv-validate --schema schema-any.json --instance instance.json
 VALID
 
-===== jsonschema (Python): null vs {} ========================================
+===== [7] jsonschema (Python): null vs {} ====================================
 
 $ jsonschema-validate --schema schema-any.json --instance instance-null.json
 VALID
 
-===== ajv (JavaScript): null vs {} ===========================================
+===== [8] ajv (JavaScript): null vs {} =======================================
 
 $ ajv-validate --schema schema-any.json --instance instance-null.json
 VALID
 
-===== boolean schema true (accepts anything) =================================
+===== [9] boolean schema true (accepts anything) =============================
 
 $ cat schema-true.json
 true
 
-===== jsonschema (Python): object vs true ====================================
+===== [10] jsonschema (Python): object vs true ===============================
 
 $ jsonschema-validate --schema schema-true.json --instance instance.json
 VALID
 
-===== ajv (JavaScript): object vs true =======================================
+===== [11] ajv (JavaScript): object vs true ==================================
 
 $ ajv-validate --schema schema-true.json --instance instance.json
 VALID
 
-===== jsonschema (Python): null vs true ======================================
+===== [12] jsonschema (Python): null vs true =================================
 
 $ jsonschema-validate --schema schema-true.json --instance instance-null.json
 VALID
 
-===== ajv (JavaScript): null vs true =========================================
+===== [13] ajv (JavaScript): null vs true ====================================
 
 $ ajv-validate --schema schema-true.json --instance instance-null.json
 VALID
 
-===== boolean schema false (rejects anything) ================================
+===== [14] boolean schema false (rejects anything) ===========================
 
 $ cat schema-false.json
 false
 
-===== jsonschema (Python): object vs false ===================================
+===== [15] jsonschema (Python): object vs false ==============================
 
 $ jsonschema-validate --schema schema-false.json --instance instance.json
 INVALID: False schema does not allow {'a': 1}
 
-===== ajv (JavaScript): object vs false ======================================
+===== [16] ajv (JavaScript): object vs false =================================
 
 $ ajv-validate --schema schema-false.json --instance instance.json
 INVALID: boolean schema is false
 
-===== jsonschema (Python): null vs false =====================================
+===== [17] jsonschema (Python): null vs false ================================
 
 $ jsonschema-validate --schema schema-false.json --instance instance-null.json
 INVALID: False schema does not allow None
 
-===== ajv (JavaScript): null vs false ========================================
+===== [18] ajv (JavaScript): null vs false ===================================
 
 $ ajv-validate --schema schema-false.json --instance instance-null.json
 INVALID: boolean schema is false

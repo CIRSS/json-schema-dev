@@ -1,5 +1,5 @@
 
-===== additionalProperties holds a schema, not a flag ========================
+===== [1] additionalProperties holds a schema, not a flag ====================
 
 Demo 01 showed that true and false are schemas. This demo shows where that
 fact is actually used, and why the language bothers to have it.
@@ -20,7 +20,7 @@ schemas that differ only in the value of additionalProperties. In the
 second, one schema is checked against two instances that differ only in the
 type of the extra property.
 
-===== the instance ===========================================================
+===== [2] the instance =======================================================
 
 $ cat instance-number.json
 {
@@ -28,7 +28,7 @@ $ cat instance-number.json
   "b": 1
 }
 
-===== extras forbidden (additionalProperties false) ==========================
+===== [3] extras forbidden (additionalProperties false) ======================
 
 $ cat schema-false.json
 {
@@ -37,17 +37,17 @@ $ cat schema-false.json
   "additionalProperties": false
 }
 
-===== jsonschema (Python): extras forbidden ==================================
+===== [4] jsonschema (Python): extras forbidden ==============================
 
 $ jsonschema-validate --schema schema-false.json --instance instance-number.json
 INVALID: Additional properties are not allowed ('b' was unexpected)
 
-===== ajv (JavaScript): extras forbidden =====================================
+===== [5] ajv (JavaScript): extras forbidden =================================
 
 $ ajv-validate --schema schema-false.json --instance instance-number.json
 INVALID: must NOT have additional properties
 
-===== extras allowed (additionalProperties true) =============================
+===== [6] extras allowed (additionalProperties true) =========================
 
 $ cat schema-true.json
 {
@@ -56,17 +56,17 @@ $ cat schema-true.json
   "additionalProperties": true
 }
 
-===== jsonschema (Python): extras allowed ====================================
+===== [7] jsonschema (Python): extras allowed ================================
 
 $ jsonschema-validate --schema schema-true.json --instance instance-number.json
 VALID
 
-===== ajv (JavaScript): extras allowed =======================================
+===== [8] ajv (JavaScript): extras allowed ===================================
 
 $ ajv-validate --schema schema-true.json --instance instance-number.json
 VALID
 
-===== the proof that it is a schema ==========================================
+===== [9] the proof that it is a schema ======================================
 
 A flag has two settings. If the slot really holds a schema, a non-boolean
 one must work there too — and must constrain the extra properties rather
@@ -77,7 +77,7 @@ checked against two instances identical except for the type of b. The
 verdict turns on that one difference, which is not something a flag could
 express.
 
-===== extras must be numbers =================================================
+===== [10] extras must be numbers ============================================
 
 $ cat schema-number.json
 {
@@ -86,7 +86,7 @@ $ cat schema-number.json
   "additionalProperties": { "type": "number" }
 }
 
-===== extra b is a number ====================================================
+===== [11] extra b is a number ===============================================
 
 $ cat instance-number.json
 {
@@ -94,17 +94,17 @@ $ cat instance-number.json
   "b": 1
 }
 
-===== jsonschema (Python): extra b is a number ===============================
+===== [12] jsonschema (Python): extra b is a number ==========================
 
 $ jsonschema-validate --schema schema-number.json --instance instance-number.json
 VALID
 
-===== ajv (JavaScript): extra b is a number ==================================
+===== [13] ajv (JavaScript): extra b is a number =============================
 
 $ ajv-validate --schema schema-number.json --instance instance-number.json
 VALID
 
-===== extra b is a string ====================================================
+===== [14] extra b is a string ===============================================
 
 $ cat instance-string.json
 {
@@ -112,12 +112,12 @@ $ cat instance-string.json
   "b": "x"
 }
 
-===== jsonschema (Python): extra b is a string ===============================
+===== [15] jsonschema (Python): extra b is a string ==========================
 
 $ jsonschema-validate --schema schema-number.json --instance instance-string.json
 INVALID: /b: 'x' is not of type 'number'
 
-===== ajv (JavaScript): extra b is a string ==================================
+===== [16] ajv (JavaScript): extra b is a string =============================
 
 $ ajv-validate --schema schema-number.json --instance instance-string.json
 INVALID: /b: must be number
