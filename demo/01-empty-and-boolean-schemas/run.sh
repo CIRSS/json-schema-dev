@@ -126,14 +126,14 @@ containing "type": 5 is therefore not a valid schema, and both
 validators refuse to proceed rather than render a verdict. That
 refusal is the meta-schema described in the first cell doing its job:
 the offered "schema" was checked against the schema for schemas, and
-its type member, paired with the value 5, failed to be meaningful.
+its "type" member, paired with the value 5, failed to be meaningful.
 
 The two "schemas" below illustrate the two facts in turn. The first,
-{"foo": "bar"}, has one member, foo, whose name is not a keyword; the
+{"foo": "bar"}, has one member, "foo", whose name is not a keyword; the
 member is ignored, its value "bar" along with it, and the first schema
 is valid and states no constraints. The second, {"type": 5}, has one
-member, type, whose name is a keyword but whose value 5 is not of the
-form type requires; the second "schema" is not valid.
+member, "type", whose name is a keyword but whose value 5 is not of the
+form "type" requires; the second "schema" is not valid.
 END_DOC
 
 show "a schema with a member no keyword recognizes"   cat schema-unknown-member.json

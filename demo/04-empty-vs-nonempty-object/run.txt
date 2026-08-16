@@ -1,84 +1,128 @@
 
-===== [1] properties does not make a property required =======================
+===== [1] "required" is what makes a member mandatory ========================
 
-The object counterpart of the previous demo, and the same trap. "type":
-"object" accepts {}. Listing a property under properties does not make it
-mandatory — properties says "if this key appears, here is its shape," which
-is a constraint on presence, not a demand for it. Only required makes a
-property obligatory.
+Demo 02 showed that "properties" is conditional: it says what a member
+must look like if the member is present, and it does not require any
+member to be present. So a schema whose members are described in full
+detail under "properties" still accepts the empty object {} -- the
+object counterpart of demo 03's empty array, and the same shape of
+trap: the constraint the author had in mind was never written.
 
-So a schema can describe every field of a record in full detail and still
-accept the empty object. This is the single most common defect in a
-generated schema: the shape is right, required is missing, and the schema
-validates documents that carry none of the data it describes.
+The keyword that demands presence is "required". Its value is a list of
+member names, and an object satisfies it only if it has a member of
+every name in the list. The value is a list even when it names one
+member: "required": ["id"]. "required" and "properties" are independent
+keywords doing separate jobs -- one asks which members must be
+present, the other what each member must look like -- and a schema
+that means "this member must be here and must be a string" needs
+both.
 
-The boundary worth testing is {} against the minimal satisfying object —
-one required property and nothing else. If the empty object passes, the
-schema is not asserting what it appears to assert.
+===== [2] the examples =======================================================
 
-===== [2] the schema (object, required id) ===================================
+Two schemas differ in one keyword: both describe a member "id" under
+"properties", and only the second adds "required": ["id"]. Each is
+checked against the empty object. The first accepts it; the second
+rejects it. The second is then checked against {"id": "x"}, which it
+accepts.
 
-$ cat schema.json
-{ "type": "object", "required": ["id"] }
+===== [3] a schema describing "id" but not requiring it ======================
 
-===== [3] the empty object ===================================================
+$ cat schema-properties-id.json
+{ "type": "object", "properties": { "id": { "type": "string" } } }
+
+===== [4] the empty object ===================================================
 
 $ cat instance-empty.json
 {}
 
-===== [4] jsonschema (Python): empty object ==================================
+===== [5] jsonschema (Python): {} vs "properties" only =======================
 
-$ jsonschema-validate --schema schema.json --instance instance-empty.json
+$ jsonschema-validate --schema schema-properties-id.json --instance instance-empty.json
+VALID
+
+===== [6] ajv (JavaScript): {} vs "properties" only ==========================
+
+$ ajv-validate --schema schema-properties-id.json --instance instance-empty.json
+VALID
+
+===== [7] the same schema with "id" required =================================
+
+$ cat schema-properties-required-id.json
+{ "type": "object", "properties": { "id": { "type": "string" } }, "required": ["id"] }
+
+===== [8] jsonschema (Python): {} vs "required" ==============================
+
+$ jsonschema-validate --schema schema-properties-required-id.json --instance instance-empty.json
 INVALID: 'id' is a required property
 
-===== [5] ajv (JavaScript): empty object =====================================
+===== [9] ajv (JavaScript): {} vs "required" =================================
 
-$ ajv-validate --schema schema.json --instance instance-empty.json
+$ ajv-validate --schema schema-properties-required-id.json --instance instance-empty.json
 INVALID: must have required property 'id'
 
-===== [6] the minimal object =================================================
+===== [10] an object with "id" present =======================================
 
-$ cat instance-min.json
+$ cat instance-id-string.json
 { "id": "x" }
 
-===== [7] jsonschema (Python): minimal object ================================
+===== [11] jsonschema (Python): "id" present =================================
 
-$ jsonschema-validate --schema schema.json --instance instance-min.json
+$ jsonschema-validate --schema schema-properties-required-id.json --instance instance-id-string.json
 VALID
 
-===== [8] ajv (JavaScript): minimal object ===================================
+===== [12] ajv (JavaScript): "id" present ====================================
 
-$ ajv-validate --schema schema.json --instance instance-min.json
+$ ajv-validate --schema schema-properties-required-id.json --instance instance-id-string.json
 VALID
 
-===== [9] required asks about presence, not content ==========================
+===== [13] "required" asks about presence, not content =======================
 
-One more instance, differing from the minimal object in exactly one way:
-the value of id is null rather than a string.
+"required" tests whether a member of the given name is present. It says
+nothing about the member's value. In particular, a member whose value
+is null is present: null is a value like any other, not a way of
+spelling absence. An object with "id": null and an object with no "id"
+member are two different documents, and only the second lacks the
+member.
 
-It passes. required is a question about which keys a document carries, and
-a key whose value is null is carried. Null is a value like any other here,
-not a way of spelling absence — the two are different states of a document,
-and only the missing key is missing.
+This matters because null is often what a program produces for a
+member it could not populate. "required" alone will not catch that; it
+reports the member present and asks nothing further. Ruling out the
+null takes a constraint on the value -- and describing the member's
+type under "properties", as the schema above does, is one.
 
-This matters because null is what a producer emits for a field it could not
-populate. required will not catch that; it reports the key as present and
-says nothing about whether anything is in it. Ruling it out takes a
-constraint on the value, such as declaring the property's type.
+===== [14] the examples ======================================================
 
-===== [10] the minimal object with a null value ==============================
+The instance {"id": null} is checked against two schemas: one with
+"required" alone, which accepts it, and the schema from above, whose
+"properties" entry types "id" as a string, which rejects it. The
+difference is the value constraint, not "required".
 
-$ cat instance-null.json
-{
-  "id": null
-}
+===== [15] an object whose "id" is null ======================================
 
-===== [11] jsonschema (Python): null value ===================================
+$ cat instance-id-null.json
+{ "id": null }
 
-$ jsonschema-validate --schema schema.json --instance instance-null.json
+===== [16] a schema requiring "id" and nothing more ==========================
+
+$ cat schema-required-only.json
+{ "type": "object", "required": ["id"] }
+
+===== [17] jsonschema (Python): null vs "required" only ======================
+
+$ jsonschema-validate --schema schema-required-only.json --instance instance-id-null.json
 VALID
 
-===== [12] ajv (JavaScript): null value ======================================
+===== [18] ajv (JavaScript): null vs "required" only =========================
 
-$ ajv-validate --schema schema.json --instance instance-null.json
+$ ajv-validate --schema schema-required-only.json --instance instance-id-null.json
 VALID
+
+===== [19] jsonschema (Python): null vs "required" + "type" ==================
+
+$ jsonschema-validate --schema schema-properties-required-id.json --instance instance-id-null.json
+INVALID: /id: None is not of type 'string'
+
+===== [20] ajv (JavaScript): null vs "required" + "type" =====================
+
+$ ajv-validate --schema schema-properties-required-id.json --instance instance-id-null.json
+INVALID: /id: must be string
