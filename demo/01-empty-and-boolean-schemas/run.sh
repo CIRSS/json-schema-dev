@@ -6,11 +6,11 @@ doc "a schema need not be an object" << 'END_DOC'
 A schema is itself JSON -- a single JSON document. And what may serve
 as a schema is specified the way anything in JSON is specified: by a
 schema. That published schema-for-schemas, the meta-schema, admits
-exactly two of JSON's six kinds of value: boolean, and object --
+exactly two of JSON's six kinds of values: boolean, and object --
 which, despite its name, is just a string-keyed map, written {...}.
 Both boolean values are schemas: true is the schema that accepts every
 instance, false the schema that rejects every instance. Some objects
-are schemas and some are not; the last cells below show the
+are valid schemas and some are not; the last cells below show the
 difference. The empty object {} is a schema, declares no constraints,
 and so behaves exactly like true.
 
@@ -57,7 +57,7 @@ show "ajv (JavaScript): null vs {}"             ajv-validate        --schema sch
 
 doc "an instance can be any JSON value" << 'END_DOC'
 The null instance above is an ordinary JSON document. JSON has
-exactly six kinds of value -- object, array, string, number, boolean,
+exactly six kinds of values -- object, array, string, number, boolean,
 and null -- and a JSON document is a serialization of exactly one
 value, of any of the six kinds. Nothing requires the value to be an
 object or an array. A file containing only 5, or only "hello", or only
@@ -98,44 +98,49 @@ show "ajv (JavaScript): object vs false"        ajv-validate        --schema sch
 show "jsonschema (Python): null vs false"       jsonschema-validate --schema schema-false.json --instance instance-null.json
 show "ajv (JavaScript): null vs false"          ajv-validate        --schema schema-false.json --instance instance-null.json
 
-doc "not every object is a schema" << 'END_DOC'
+doc "not every object is a valid schema" << 'END_DOC'
 When a schema is an object, its members are how it states constraints.
 JSON Schema defines a fixed set of member names, called keywords, and
 gives each a meaning: "type", for example, is the keyword whose value
-names which of the six kinds of value an instance must be. Later demos
+names which of the six kinds of values an instance must be. Later demos
 introduce the keywords one at a time. Two facts about them settle
-which objects are schemas.
+which objects are valid schemas.
 
-First, a member whose name is not a keyword is simply ignored. An
-object made only of such members states no constraints, so it is a
-schema and behaves exactly like {}. This is deliberate, and useful in
-two ways. A schema can carry explanations for the people who read it
--- welcome, since JSON has no comment syntax -- and it can carry extra
-instructions for tools that look for members beyond the standard's
-own (demo 16 uses this to give validators the exact error message to
-print). But the same tolerance has a sharp edge: a misspelled keyword
-is not an error, just an ignored member, and the constraint it was
-meant to state silently disappears.
+First, a member whose name is not a keyword is simply ignored -- name
+and value together; the value may be anything and is never examined.
+This is deliberate, and useful in two ways. A schema can carry
+explanations for the people who read it -- welcome, since JSON has no
+comment syntax -- and it can carry extra instructions for tools that
+look for members beyond the standard's own (demo 16 uses this to give
+validators the exact error message to print). But the same tolerance
+has a sharp edge: a misspelled keyword is not an error, just an
+ignored member, and the constraint it was meant to state silently
+disappears. It follows that an object none of whose member names is a
+keyword states no constraints, so it is a valid schema and behaves
+exactly like {}.
 
 Second, a member whose name is a keyword must have a value of the form
 that keyword requires. The value of "type" must be a string naming a
 kind (or a list of such strings); the number 5 is neither. An object
-containing "type": 5 is therefore not a schema at all, and both
+containing "type": 5 is therefore not a valid schema, and both
 validators refuse to proceed rather than render a verdict. That
-refusal is the meta-schema from the first cell doing its job: the
-object was checked against the schema for schemas and failed. Refusing
-is correct -- a verdict from something that is not a schema would mean
-nothing.
+refusal is the meta-schema described in the first cell doing its job:
+the offered "schema" was checked against the schema for schemas, and
+its type member, paired with the value 5, failed to be meaningful.
 
-The two objects below differ in exactly this respect: whether the one
-member is a keyword.
+The two "schemas" below illustrate the two facts in turn. The first,
+{"foo": "bar"}, has one member, foo, whose name is not a keyword; the
+member is ignored, its value "bar" along with it, and the first schema
+is valid and states no constraints. The second, {"type": 5}, has one
+member, type, whose name is a keyword but whose value 5 is not of the
+form type requires; the second "schema" is not valid.
 END_DOC
 
-show "an object with a member no keyword recognizes"  cat schema-unknown-member.json
-show "jsonschema (Python): object vs unknown member"  jsonschema-validate --schema schema-unknown-member.json --instance instance.json
-show "ajv (JavaScript): object vs unknown member"     ajv-validate        --schema schema-unknown-member.json --instance instance.json
-show "an object that is not a schema"                 cat not-a-schema.json
-show "jsonschema (Python): refusal, not a verdict"    jsonschema-validate --schema not-a-schema.json --instance instance.json
-show "ajv (JavaScript): refusal, not a verdict"       ajv-validate        --schema not-a-schema.json --instance instance.json
+show "a schema with a member no keyword recognizes"   cat schema-unknown-member.json
+show "jsonschema (Python): unknown member"            jsonschema-validate --schema schema-unknown-member.json --instance instance.json
+show "ajv (JavaScript): unknown member"               ajv-validate        --schema schema-unknown-member.json --instance instance.json
+show "a \"schema\" that is not valid"                 cat schema-type-5.json
+show "jsonschema (Python): refusal, not a verdict"    jsonschema-validate --schema schema-type-5.json --instance instance.json
+show "ajv (JavaScript): refusal, not a verdict"       ajv-validate        --schema schema-type-5.json --instance instance.json
 
 exit 0
