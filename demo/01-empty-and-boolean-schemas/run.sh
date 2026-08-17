@@ -61,7 +61,9 @@ exactly six kinds of values -- object, array, string, number, boolean,
 and null -- and a JSON document is a serialization of exactly one
 value, of any of the six kinds. Nothing requires the value to be an
 object or an array. A file containing only 5, or only "hello", or only
-null, is a complete JSON document.
+null, is a complete JSON document. The notation alone decides the
+kind: 5 is a number, but "5" -- the same digit between quotation
+marks -- is a string, and the two are values of different kinds.
 
 JSON's syntax comes from JavaScript, and it is easy to assume that
 whatever JavaScript accepts as a literal value, JSON accepts too. The

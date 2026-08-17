@@ -210,7 +210,15 @@ function main() {
   // author's message replaces the library's for failures it covers. The
   // matching lookup is implemented independently in jsonschema-validate, so
   // authored messages are cross-validated like verdicts (demo 16).
-  const ajv = new Ajv2020({ allErrors: true, strict: false, logger });
+  //
+  // validateFormats: false makes "format" a pure annotation on this leg,
+  // silently, matching the Python leg (which has no format checker
+  // attached). Without it Ajv warns that each format is "unknown" and
+  // ignored -- true only because its format definitions live in an add-on
+  // this wrapper does not load, and misleading when ignoring is all the
+  // wrapper ever does. Format assertion, if added, is added to both legs
+  // together, as an explicit option.
+  const ajv = new Ajv2020({ allErrors: true, strict: false, validateFormats: false, logger });
   ajvErrors(ajv);
   for (const path of opts.ref ?? []) {
     const refSchema = loadJson(path, 'ref schema');
