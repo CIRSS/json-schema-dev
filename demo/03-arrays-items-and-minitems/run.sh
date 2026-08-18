@@ -21,7 +21,7 @@ The value of "items" is a complete schema, exactly as each value in a
 "properties" object is. That is the same nesting demo 02 pointed at:
 the keywords used at the top level are used again inside, and a schema
 describes structure at any depth by placing schemas inside schemas
-(demo 08). And because the "items" schema is a schema like any other,
+(demo 09). And because the "items" schema is a schema like any other,
 it need not name a single kind: {"items": {"type": ["string",
 "number"]}} allows strings and numbers to mix freely, in any order.
 What "items" cannot do is constrain elements by position -- first a

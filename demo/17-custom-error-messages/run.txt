@@ -1,0 +1,242 @@
+##############################################################################
+#
+#   json-schema-dev  ·  demo 17: custom error messages
+#
+##############################################################################
+
+===== [1] error messages are the validator's, not the schema's ===============
+
+Nothing in the JSON Schema standard lets a schema say what its error
+messages should be. The standard fixes the structure of validation output —
+which keyword failed, where in the instance — but the message text is each
+implementation's own. The baseline below shows the consequence: one schema,
+one failing instance, and two different sentences for the same failure.
+Every INVALID line in the previous fifteen demos has this property.
+
+----- [2] the schema, with no message of its own -----------------------------
+
+$ cat schema-stock.json
+{
+  "properties": {
+    "checksum": { "pattern": "^[0-9a-f]{4}$" }
+  }
+}
+
+----- [3] the failing instance -----------------------------------------------
+
+$ cat instance-bad-checksum.json
+{"checksum": "XYZ"}
+
+----- [4] jsonschema (Python): library message -------------------------------
+
+$ jsonschema-validate --schema schema-stock.json --instance instance-bad-checksum.json
+INVALID: /checksum: 'XYZ' does not match '^[0-9a-f]{4}$'
+
+----- [5] ajv (JavaScript): library message ----------------------------------
+
+$ ajv-validate --schema schema-stock.json --instance instance-bad-checksum.json
+INVALID: /checksum: must match pattern "^[0-9a-f]{4}$"
+
+===== [6] errorMessage: the schema author's message, as data in the schema =====
+
+The second schema differs in one addition: an errorMessage keyword beside
+the pattern it explains. errorMessage is not part of the standard — it is
+defined by Ajv's ajv-errors plugin, and 2020-12's rule that unknown
+keywords are ignored is what makes carrying it legal everywhere.
+
+But "ignored by the library" does not mean unusable: a schema is JSON, and
+the messages are right there in it. The Python wrapper reads them itself —
+for each failure, it looks for the nearest enclosing errorMessage — so both
+validators now produce the same authored sentence, and for the first time
+in this gallery two INVALID lines agree word for word. The message also
+reads as documentation in place: description says what a constraint is,
+errorMessage says what violating it means.
+
+----- [7] the schema with an errorMessage ------------------------------------
+
+$ cat schema-message.json
+{
+  "properties": {
+    "checksum": {
+      "pattern": "^[0-9a-f]{4}$",
+      "errorMessage": "checksum must be exactly four lowercase hex digits"
+    }
+  }
+}
+
+----- [8] jsonschema (Python): authored message ------------------------------
+
+$ jsonschema-validate --schema schema-message.json --instance instance-bad-checksum.json
+INVALID: /checksum: checksum must be exactly four lowercase hex digits
+
+----- [9] ajv (JavaScript): authored message ---------------------------------
+
+$ ajv-validate --schema schema-message.json --instance instance-bad-checksum.json
+INVALID: /checksum: checksum must be exactly four lowercase hex digits
+
+===== [10] interpolation restores what the authored message lost =============
+
+Compare the authored message with the library messages above it: something
+went missing. Python's library message quoted the offending value — 'XYZ' —
+and the fixed sentence does not. A reader of a long validation report wants
+to see what the bad value was, not just where it lives.
+
+errorMessage templates recover it. The next schema differs from the last in
+one way: the message contains ${/checksum}, a JSON pointer resolved against
+the instance and replaced by the value found there, JSON-encoded. Both
+validators print the offending value inside the authored sentence — the
+message is once again about this instance, not just about the rule.
+
+----- [11] the schema with an interpolated message ---------------------------
+
+$ cat schema-template.json
+{
+  "properties": {
+    "checksum": {
+      "pattern": "^[0-9a-f]{4}$",
+      "errorMessage": "checksum ${/checksum} is not four lowercase hex digits"
+    }
+  }
+}
+
+----- [12] jsonschema (Python): interpolated ---------------------------------
+
+$ jsonschema-validate --schema schema-template.json --instance instance-bad-checksum.json
+INVALID: /checksum: checksum "XYZ" is not four lowercase hex digits
+
+----- [13] ajv (JavaScript): interpolated ------------------------------------
+
+$ ajv-validate --schema schema-template.json --instance instance-bad-checksum.json
+INVALID: /checksum: checksum "XYZ" is not four lowercase hex digits
+
+===== [14] an absolute pointer is the wrong locator when cardinality exceeds one =====
+
+The pointer above worked because checksum has exactly one location, known
+when the schema was written. The next schema constrains the items of an
+array, and its message tries the same trick with the absolute pointer
+${/artifacts/0}. The instance carries two items — a well-formed one first,
+a malformed one second — and the failing item is not item 0.
+
+The verdict correctly names /artifacts/1, but the authored sentence quotes
+"cafe", the innocent neighbor: an absolute pointer is a fixed address, and
+no fixed address written into a schema can name which item will fail.
+
+----- [15] the items schema with an absolute pointer -------------------------
+
+$ cat schema-items-absolute.json
+{
+  "properties": {
+    "artifacts": {
+      "items": {
+        "pattern": "^[0-9a-f]{4}$",
+        "errorMessage": "artifact digest ${/artifacts/0} is malformed"
+      }
+    }
+  }
+}
+
+----- [16] two artifacts, the second malformed -------------------------------
+
+$ cat instance-artifacts.json
+{"artifacts": ["cafe", "XYZ"]}
+
+----- [17] jsonschema (Python): absolute pointer -----------------------------
+
+$ jsonschema-validate --schema schema-items-absolute.json --instance instance-artifacts.json
+INVALID: /artifacts/1: artifact digest "cafe" is malformed
+
+----- [18] ajv (JavaScript): absolute pointer --------------------------------
+
+$ ajv-validate --schema schema-items-absolute.json --instance instance-artifacts.json
+INVALID: /artifacts/1: artifact digest "cafe" is malformed
+
+===== [19] a relative pointer names the failing value, wherever it occurs =====
+
+The fix is the second pointer form, differing from the schema above in one
+place: ${0} instead of ${/artifacts/0}. A relative JSON pointer resolves
+from the failing value's own location — the integer climbs that many
+levels up from it, a following path descends from there — so ${0} is
+always the value under validation, whichever item that turns out to be.
+Both validators now quote the malformed digest, and the same schema would
+do so for item 40 of a different instance. For repeated structures, this
+is the only pointer form that works.
+
+----- [20] the items schema with a relative pointer --------------------------
+
+$ cat schema-items-relative.json
+{
+  "properties": {
+    "artifacts": {
+      "items": {
+        "pattern": "^[0-9a-f]{4}$",
+        "errorMessage": "artifact digest ${0} is malformed"
+      }
+    }
+  }
+}
+
+----- [21] jsonschema (Python): relative pointer -----------------------------
+
+$ jsonschema-validate --schema schema-items-relative.json --instance instance-artifacts.json
+INVALID: /artifacts/1: artifact digest "XYZ" is malformed
+
+----- [22] ajv (JavaScript): relative pointer --------------------------------
+
+$ ajv-validate --schema schema-items-relative.json --instance instance-artifacts.json
+INVALID: /artifacts/1: artifact digest "XYZ" is malformed
+
+===== [23] one message per keyword, and library messages where none is given =====
+
+errorMessage also takes an object form, supplying one message per keyword.
+The schema below asserts two things — the instance is an object, and it
+carries a checksum — but gives an authored message only for the second.
+The two instances that follow fail one assertion each.
+
+The missing checksum gets the authored sentence, identically from both
+validators. The non-object gets each library's own message: coverage is
+per keyword, and anything not covered falls back to the baseline behavior.
+The portable subset shown in this demo — a plain string covering its
+subschema, an object keyed by keyword, and ${/pointer} value interpolation
+— is what both wrappers implement and cross-validate; schemas meant to be
+portable should stay within it.
+
+----- [24] the schema (messages for required only) ---------------------------
+
+$ cat schema-per-keyword.json
+{
+  "type": "object",
+  "required": ["checksum"],
+  "errorMessage": {
+    "required": "a record must carry a checksum"
+  }
+}
+
+----- [25] missing checksum --------------------------------------------------
+
+$ cat instance-empty.json
+{}
+
+----- [26] jsonschema (Python): covered keyword ------------------------------
+
+$ jsonschema-validate --schema schema-per-keyword.json --instance instance-empty.json
+INVALID: a record must carry a checksum
+
+----- [27] ajv (JavaScript): covered keyword ---------------------------------
+
+$ ajv-validate --schema schema-per-keyword.json --instance instance-empty.json
+INVALID: a record must carry a checksum
+
+----- [28] not an object at all ----------------------------------------------
+
+$ cat instance-string.json
+"hello"
+
+----- [29] jsonschema (Python): uncovered keyword ----------------------------
+
+$ jsonschema-validate --schema schema-per-keyword.json --instance instance-string.json
+INVALID: 'hello' is not of type 'object'
+
+----- [30] ajv (JavaScript): uncovered keyword -------------------------------
+
+$ ajv-validate --schema schema-per-keyword.json --instance instance-string.json
+INVALID: must be object

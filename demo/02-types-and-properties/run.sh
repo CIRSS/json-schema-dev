@@ -76,7 +76,7 @@ member of that name must satisfy, if the member is present. So
 member named "a", that member's value must be a number. Because each
 value in a "properties" object is a complete schema, the same keywords
 used at the top level are used again inside it -- here, "type" -- and
-this nesting is how schemas describe structure at any depth. Demo 08
+this nesting is how schemas describe structure at any depth. Demo 09
 takes up what it means for a schema to sit inside a schema.
 
 Nearly every schema in practice is "type": "object" together with a
@@ -105,7 +105,7 @@ does not require the member to be present -- that is a separate
 keyword's job ("required", demo 04) -- and it does not forbid members
 it does not list; an instance may carry any number of members the
 schema never mentions. Forbidding unlisted members takes a keyword of
-its own, taken up in demo 13.
+its own, taken up in demo 14.
 
 A schema built from "type" and "properties" alone therefore accepts the
 empty object, and accepts an object full of members it knows nothing

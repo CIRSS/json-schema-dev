@@ -31,7 +31,7 @@ schema whose key is "$schema" and whose value is that version's URI.
 In all of these demos, the validation tools invoked assume and enforce
 the current version, 2020-12; for that reason the demos generally omit
 the declaration, and by default the tools refuse to validate against a
-schema that declares a different version (demo 19 shows this).
+schema that declares a different version (demo 20 shows this).
 
 ===== [3] the examples =======================================================
 
@@ -206,7 +206,7 @@ and value together; the value may be anything and is never examined.
 This is deliberate, and useful in two ways. A schema can carry
 explanations for the people who read it -- welcome, since JSON has no
 comment syntax -- and it can carry extra instructions for tools that
-look for members beyond the standard's own (demo 16 uses this to give
+look for members beyond the standard's own (demo 17 uses this to give
 validators the exact error message to print). But the same tolerance
 has a sharp edge: a misspelled keyword is not an error, just an
 ignored member, and the constraint it was meant to state silently

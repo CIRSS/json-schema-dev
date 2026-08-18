@@ -1,0 +1,224 @@
+##############################################################################
+#
+#   json-schema-dev  ·  demo 08: anyOf and not
+#
+##############################################################################
+
+===== [1] combining predicates: and, or, not =================================
+
+Every schema so far has been a single object whose keywords all apply
+at once: a schema object is an "and" of its members. JSON Schema also
+has keywords whose values are themselves schemas and whose job is to
+combine verdicts. "allOf" is "and" made explicit, over a list of
+schemas; "anyOf" is "or", satisfied if at least one schema in its
+list is; "oneOf" is "exactly one"; "not" is negation, satisfied only
+if the schema inside is not; and "if"/"then"/"else" chooses between
+schemas by a test. Together they are the boolean applicators, and
+they let a schema be assembled from small predicates rather than
+written as one large one.
+
+This demo shows "anyOf" and "not", using "pattern" as the small
+predicate because a pattern is self-contained: what it accepts can
+be read off the string. "oneOf", "if"/"then"/"else", and "allOf"
+each get their own demo later.
+
+
+##############################################################################
+##### 1. anyOf ###############################################################
+##############################################################################
+
+===== [2] or, written two ways ===============================================
+
+Suppose a version field must be either a three-part number such as
+1.2.3 or the word "latest". As a single pattern:
+
+    ^([0-9]+[.][0-9]+[.][0-9]+|latest)$
+
+Reading it left to right: [0-9]+ is one or more digits. [.] is a
+class containing only the dot, and it is written that way because a
+bare . in a pattern means "any single character" -- [.] means the
+dot itself. So [0-9]+[.][0-9]+[.][0-9]+ is three runs of digits
+separated by dots. The | that follows is alternation: the pattern
+matches what is on its left or what is on its right, here the word
+latest. The parentheses group the two alternatives, so that the
+anchors ^ and $ apply to the whole of either one rather than to just
+one side.
+
+The same requirement can instead be written with "anyOf" and two
+plain patterns, one per alternative:
+
+    "anyOf": [ {"pattern": "^[0-9]+[.][0-9]+[.][0-9]+$"},
+               {"pattern": "^latest$"} ]
+
+An instance satisfies "anyOf" if it satisfies at least one schema in
+the list. The two forms accept exactly the same strings and
+reject exactly the same strings, and the verdicts below agree case
+for case. What "anyOf" changes is the reading: each
+alternative is a short pattern on its own line, and adding a third
+alternative is adding a third entry rather than editing the inside
+of a longer expression. (Each entry is a complete schema, so it can
+also be given a name and referred to from wherever it is needed;
+demo 12 shows how.)
+
+===== [3] the examples =======================================================
+
+Both schemas are checked against three strings: a three-part version,
+the word "latest", and a two-part version that neither alternative
+admits. Both validators, every case. On the rejection the verdicts
+agree but the reports do not: Python says only that no alternative
+matched, while Ajv reports each alternative's failure separately
+before the summary -- so a reader of the Ajv output can see which
+pattern the value came closest to satisfying, and why it fell short.
+
+----- [4] the alternation pattern --------------------------------------------
+
+$ cat schema-alternation.json
+{"pattern": "^([0-9]+[.][0-9]+[.][0-9]+|latest)$"}
+
+----- [5] the anyOf schema ---------------------------------------------------
+
+$ cat schema-anyof.json
+{"anyOf": [{"pattern": "^[0-9]+[.][0-9]+[.][0-9]+$"}, {"pattern": "^latest$"}]}
+
+----- [6] a three-part version -----------------------------------------------
+
+$ cat instance-version.json
+"1.2.3"
+
+----- [7] jsonschema (Python): alternation, version --------------------------
+
+$ jsonschema-validate --schema schema-alternation.json --instance instance-version.json
+VALID
+
+----- [8] ajv (JavaScript): alternation, version -----------------------------
+
+$ ajv-validate --schema schema-alternation.json --instance instance-version.json
+VALID
+
+----- [9] jsonschema (Python): anyOf, version --------------------------------
+
+$ jsonschema-validate --schema schema-anyof.json --instance instance-version.json
+VALID
+
+----- [10] ajv (JavaScript): anyOf, version ----------------------------------
+
+$ ajv-validate --schema schema-anyof.json --instance instance-version.json
+VALID
+
+----- [11] the word latest ---------------------------------------------------
+
+$ cat instance-latest.json
+"latest"
+
+----- [12] jsonschema (Python): alternation, latest --------------------------
+
+$ jsonschema-validate --schema schema-alternation.json --instance instance-latest.json
+VALID
+
+----- [13] ajv (JavaScript): alternation, latest -----------------------------
+
+$ ajv-validate --schema schema-alternation.json --instance instance-latest.json
+VALID
+
+----- [14] jsonschema (Python): anyOf, latest --------------------------------
+
+$ jsonschema-validate --schema schema-anyof.json --instance instance-latest.json
+VALID
+
+----- [15] ajv (JavaScript): anyOf, latest -----------------------------------
+
+$ ajv-validate --schema schema-anyof.json --instance instance-latest.json
+VALID
+
+----- [16] a two-part version ------------------------------------------------
+
+$ cat instance-two-part.json
+"1.2"
+
+----- [17] jsonschema (Python): alternation, two-part ------------------------
+
+$ jsonschema-validate --schema schema-alternation.json --instance instance-two-part.json
+INVALID: '1.2' does not match '^([0-9]+[.][0-9]+[.][0-9]+|latest)$'
+
+----- [18] ajv (JavaScript): alternation, two-part ---------------------------
+
+$ ajv-validate --schema schema-alternation.json --instance instance-two-part.json
+INVALID: must match pattern "^([0-9]+[.][0-9]+[.][0-9]+|latest)$"
+
+----- [19] jsonschema (Python): anyOf, two-part ------------------------------
+
+$ jsonschema-validate --schema schema-anyof.json --instance instance-two-part.json
+INVALID: '1.2' is not valid under any of the given schemas
+
+----- [20] ajv (JavaScript): anyOf, two-part ---------------------------------
+
+$ ajv-validate --schema schema-anyof.json --instance instance-two-part.json
+INVALID: must match pattern "^[0-9]+[.][0-9]+[.][0-9]+$"
+INVALID: must match pattern "^latest$"
+INVALID: must match a schema in anyOf
+
+
+##############################################################################
+##### 2. not #################################################################
+##############################################################################
+
+===== [21] and not this ======================================================
+
+"not" takes one schema and inverts its verdict. Placed beside a
+"pattern", it says: matches this, and not that. A regular expression
+can express "not that" only with lookaround, which demo 07 used for
+the trailing newline and which not every engine supports; "not" says
+it with a plain keyword and a plain pattern, in every validator.
+
+The example: a four-digit hexadecimal identifier that must not be
+all zeros. The pattern admits the hexadecimal strings; "not" removes
+the one string among them that is reserved.
+
+===== [22] the examples ======================================================
+
+One schema, checked against a hexadecimal string and against "0000".
+Both validators.
+
+----- [23] the schema --------------------------------------------------------
+
+$ cat schema-hex-not-zero.json
+{"pattern": "^[0-9a-f]{4}$", "not": {"pattern": "^0{4}$"}}
+
+----- [24] a hexadecimal string ----------------------------------------------
+
+$ cat instance-hex.json
+"cafe"
+
+----- [25] jsonschema (Python): hex ------------------------------------------
+
+$ jsonschema-validate --schema schema-hex-not-zero.json --instance instance-hex.json
+VALID
+
+----- [26] ajv (JavaScript): hex ---------------------------------------------
+
+$ ajv-validate --schema schema-hex-not-zero.json --instance instance-hex.json
+VALID
+
+----- [27] all zeros ---------------------------------------------------------
+
+$ cat instance-zeros.json
+"0000"
+
+----- [28] jsonschema (Python): zeros ----------------------------------------
+
+$ jsonschema-validate --schema schema-hex-not-zero.json --instance instance-zeros.json
+INVALID: '0000' should not be valid under {'pattern': '^0{4}$'}
+
+----- [29] ajv (JavaScript): zeros -------------------------------------------
+
+$ ajv-validate --schema schema-hex-not-zero.json --instance instance-zeros.json
+INVALID: must NOT be valid
+
+===== [30] the rule: several plain patterns over one clever one ==============
+
+Where a constraint on a string decomposes into alternatives or
+exclusions, write each part as its own plain pattern and let "anyOf"
+and "not" do the combining. Each part stays readable and separately
+testable, and the combining is done by keywords every validator
+implements identically rather than by regular-expression features
+they may not share.

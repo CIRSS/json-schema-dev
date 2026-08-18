@@ -148,7 +148,7 @@ only if it fails the schema inside. And keywords placed side by side
 in one schema object are all required at once -- a schema object is
 an "and" of its keywords -- so this schema says: matches
 ^[0-9a-f]{4}$, and does not match \n$. (This is the first appearance
-of "not" in these demos; a later demo covers it and its relatives
+of "not" in these demos; demo 08 covers it and its relatives
 properly.) The inner pattern, a newline followed by $ ("\n" in a
 JSON string is a newline), matches any string that ends in a newline,
 in every engine; "not" turns that into "reject those". Its cost is
@@ -204,7 +204,7 @@ is why every demo here runs both.
 END_DOC
 
 doc "the examples" << 'END_DOC'
-A schema spelling "hexadecimal digits only" with the POSIX class
+A schema that writes "hexadecimal digits only" as the POSIX class
 [[:xdigit:]] is checked against the plain hex string, and then
 against the two-character string "[]". Ajv refuses the schema both
 times; Python warns, reports the hex string invalid, and reports "[]"
