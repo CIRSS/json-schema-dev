@@ -1,3 +1,8 @@
+##############################################################################
+#
+#   json-schema-dev  ·  demo 06: annotations vs assertions
+#
+##############################################################################
 
 ===== [1] keywords are either assertions or annotations ======================
 
@@ -47,7 +52,7 @@ assertions enforce, validation will enforce the assertions, and a
 reader who turns to the description to learn why a document failed
 will be pointed the wrong way.
 
-===== [4] a schema whose prose disagrees with its assertion ==================
+----- [4] a schema whose prose disagrees with its assertion ------------------
 
 $ cat schema-annotated.json
 {
@@ -57,32 +62,32 @@ $ cat schema-annotated.json
   "type": "string"
 }
 
-===== [5] an amount written as a string ======================================
+----- [5] an amount written as a string --------------------------------------
 
 $ cat instance-string.json
 "12.50"
 
-===== [6] jsonschema (Python): the string ====================================
+----- [6] jsonschema (Python): the string ------------------------------------
 
 $ jsonschema-validate --schema schema-annotated.json --instance instance-string.json
 VALID
 
-===== [7] ajv (JavaScript): the string =======================================
+----- [7] ajv (JavaScript): the string ---------------------------------------
 
 $ ajv-validate --schema schema-annotated.json --instance instance-string.json
 VALID
 
-===== [8] the same amount as a number ========================================
+----- [8] the same amount as a number ----------------------------------------
 
 $ cat instance-number.json
 12.50
 
-===== [9] jsonschema (Python): the number ====================================
+----- [9] jsonschema (Python): the number ------------------------------------
 
 $ jsonschema-validate --schema schema-annotated.json --instance instance-number.json
 INVALID: 12.5 is not of type 'string'
 
-===== [10] ajv (JavaScript): the number ======================================
+----- [10] ajv (JavaScript): the number --------------------------------------
 
 $ ajv-validate --schema schema-annotated.json --instance instance-number.json
 INVALID: must be string
@@ -110,13 +115,14 @@ which rejects what does not match.
 
 The "pattern" below -- runs of letters and digits separated by dots,
 one @, then a domain of one or more dotted runs ending in a run of
-letters -- is not a definition of an email address; no short regular expression is, and this one excludes
-hyphens, underscores, and plus signs that real addresses may contain.
-Its virtue is different: what it checks is exactly what it says, no
-more and no less, on every validator alike. "format": "email"
-promises a correctness that no implementation quite delivers, and
-each delivers differently. A "pattern" makes the author decide, and
-disclose, how much of the syntax is actually being enforced.
+letters -- is not a definition of an email address; no short regular
+expression is, and this one excludes hyphens, underscores, and plus
+signs that real addresses may contain. Its virtue is different: what
+it checks is exactly what it says, no more and no less, on every
+validator alike. "format": "email" promises a correctness that no
+implementation quite delivers, and each delivers differently. A
+"pattern" makes the author decide, and disclose, how much of the
+syntax is actually being enforced.
 
 The rule that follows: whatever must be enforced, write as a
 "pattern". Use "format" to say what a value means, never to make it
@@ -131,17 +137,17 @@ same string with its @ replaced by a dot, which is not one. The
 "format" schema accepts both. The "pattern" schema accepts the address
 and rejects the near-miss.
 
-===== [13] an email address ==================================================
+----- [13] an email address --------------------------------------------------
 
 $ cat instance-email.json
 "ada.lovelace@example.org"
 
-===== [14] the same string with a dot for the @ ==============================
+----- [14] the same string with a dot for the @ ------------------------------
 
 $ cat instance-missing-at-sign.json
 "ada.lovelace.example.org"
 
-===== [15] the rule written as a "format" ====================================
+----- [15] the rule written as a "format" ------------------------------------
 
 $ cat schema-format.json
 {
@@ -149,27 +155,27 @@ $ cat schema-format.json
   "format": "email"
 }
 
-===== [16] jsonschema (Python): address vs "format" ==========================
+----- [16] jsonschema (Python): address vs "format" --------------------------
 
 $ jsonschema-validate --schema schema-format.json --instance instance-email.json
 VALID
 
-===== [17] ajv (JavaScript): address vs "format" =============================
+----- [17] ajv (JavaScript): address vs "format" -----------------------------
 
 $ ajv-validate --schema schema-format.json --instance instance-email.json
 VALID
 
-===== [18] jsonschema (Python): near-miss vs "format" ========================
+----- [18] jsonschema (Python): near-miss vs "format" ------------------------
 
 $ jsonschema-validate --schema schema-format.json --instance instance-missing-at-sign.json
 VALID
 
-===== [19] ajv (JavaScript): near-miss vs "format" ===========================
+----- [19] ajv (JavaScript): near-miss vs "format" ---------------------------
 
 $ ajv-validate --schema schema-format.json --instance instance-missing-at-sign.json
 VALID
 
-===== [20] the rule written as a "pattern" ===================================
+----- [20] the rule written as a "pattern" -----------------------------------
 
 $ cat schema-pattern.json
 {
@@ -177,22 +183,22 @@ $ cat schema-pattern.json
   "pattern": "^[A-Za-z0-9]+([.][A-Za-z0-9]+)*@([A-Za-z0-9]+[.])+[A-Za-z]+$"
 }
 
-===== [21] jsonschema (Python): address vs "pattern" =========================
+----- [21] jsonschema (Python): address vs "pattern" -------------------------
 
 $ jsonschema-validate --schema schema-pattern.json --instance instance-email.json
 VALID
 
-===== [22] ajv (JavaScript): address vs "pattern" ============================
+----- [22] ajv (JavaScript): address vs "pattern" ----------------------------
 
 $ ajv-validate --schema schema-pattern.json --instance instance-email.json
 VALID
 
-===== [23] jsonschema (Python): near-miss vs "pattern" =======================
+----- [23] jsonschema (Python): near-miss vs "pattern" -----------------------
 
 $ jsonschema-validate --schema schema-pattern.json --instance instance-missing-at-sign.json
 INVALID: 'ada.lovelace.example.org' does not match '^[A-Za-z0-9]+([.][A-Za-z0-9]+)*@([A-Za-z0-9]+[.])+[A-Za-z]+$'
 
-===== [24] ajv (JavaScript): near-miss vs "pattern" ==========================
+----- [24] ajv (JavaScript): near-miss vs "pattern" --------------------------
 
 $ ajv-validate --schema schema-pattern.json --instance instance-missing-at-sign.json
 INVALID: must match pattern "^[A-Za-z0-9]+([.][A-Za-z0-9]+)*@([A-Za-z0-9]+[.])+[A-Za-z]+$"

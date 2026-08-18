@@ -1,3 +1,8 @@
+##############################################################################
+#
+#   json-schema-dev  ·  demo 03: arrays items and minitems
+#
+##############################################################################
 
 ===== [1] "items" constrains every element of an array =======================
 
@@ -30,37 +35,37 @@ arrays that differ in one element: [1, 2, 3], and [1, "x"], where the
 second element is a string. The first is accepted; the second is
 rejected, and the location reported names the offending element.
 
-===== [3] the schema (an array of numbers) ===================================
+----- [3] the schema (an array of numbers) -----------------------------------
 
 $ cat schema-items.json
 { "type": "array", "items": { "type": "number" } }
 
-===== [4] an array of numbers ================================================
+----- [4] an array of numbers ------------------------------------------------
 
 $ cat instance-three.json
 [1, 2, 3]
 
-===== [5] jsonschema (Python): numbers =======================================
+----- [5] jsonschema (Python): numbers ---------------------------------------
 
 $ jsonschema-validate --schema schema-items.json --instance instance-three.json
 VALID
 
-===== [6] ajv (JavaScript): numbers ==========================================
+----- [6] ajv (JavaScript): numbers ------------------------------------------
 
 $ ajv-validate --schema schema-items.json --instance instance-three.json
 VALID
 
-===== [7] an array with a string among the numbers ===========================
+----- [7] an array with a string among the numbers ---------------------------
 
 $ cat instance-mixed.json
 [1, "x"]
 
-===== [8] jsonschema (Python): a string among them ===========================
+----- [8] jsonschema (Python): a string among them ---------------------------
 
 $ jsonschema-validate --schema schema-items.json --instance instance-mixed.json
 INVALID: /1: 'x' is not of type 'number'
 
-===== [9] ajv (JavaScript): a string among them ==============================
+----- [9] ajv (JavaScript): a string among them ------------------------------
 
 $ ajv-validate --schema schema-items.json --instance instance-mixed.json
 INVALID: /1: must be number
@@ -85,17 +90,17 @@ meaningful, and if it is not, say so with the keyword introduced next.
 The same schema is checked against the empty array, which is
 accepted.
 
-===== [12] the empty array ===================================================
+----- [12] the empty array ---------------------------------------------------
 
 $ cat instance-empty.json
 []
 
-===== [13] jsonschema (Python): empty array ==================================
+----- [13] jsonschema (Python): empty array ----------------------------------
 
 $ jsonschema-validate --schema schema-items.json --instance instance-empty.json
 VALID
 
-===== [14] ajv (JavaScript): empty array =====================================
+----- [14] ajv (JavaScript): empty array -------------------------------------
 
 $ ajv-validate --schema schema-items.json --instance instance-empty.json
 VALID
@@ -121,42 +126,42 @@ array from above. The empty array is now rejected; the other two are
 accepted, the three-element array showing that the floor is not a
 count.
 
-===== [17] the schema (an array of numbers, "minItems": 1) ===================
+----- [17] the schema (an array of numbers, "minItems": 1) -------------------
 
 $ cat schema-items-min1.json
 { "type": "array", "items": { "type": "number" }, "minItems": 1 }
 
-===== [18] jsonschema (Python): empty array ==================================
+----- [18] jsonschema (Python): empty array ----------------------------------
 
 $ jsonschema-validate --schema schema-items-min1.json --instance instance-empty.json
 INVALID: [] should be non-empty
 
-===== [19] ajv (JavaScript): empty array =====================================
+----- [19] ajv (JavaScript): empty array -------------------------------------
 
 $ ajv-validate --schema schema-items-min1.json --instance instance-empty.json
 INVALID: must NOT have fewer than 1 items
 
-===== [20] a one-element array ===============================================
+----- [20] a one-element array -----------------------------------------------
 
 $ cat instance-one.json
 [1]
 
-===== [21] jsonschema (Python): one element ==================================
+----- [21] jsonschema (Python): one element ----------------------------------
 
 $ jsonschema-validate --schema schema-items-min1.json --instance instance-one.json
 VALID
 
-===== [22] ajv (JavaScript): one element =====================================
+----- [22] ajv (JavaScript): one element -------------------------------------
 
 $ ajv-validate --schema schema-items-min1.json --instance instance-one.json
 VALID
 
-===== [23] jsonschema (Python): three elements ===============================
+----- [23] jsonschema (Python): three elements -------------------------------
 
 $ jsonschema-validate --schema schema-items-min1.json --instance instance-three.json
 VALID
 
-===== [24] ajv (JavaScript): three elements ==================================
+----- [24] ajv (JavaScript): three elements ----------------------------------
 
 $ ajv-validate --schema schema-items-min1.json --instance instance-three.json
 VALID

@@ -2,6 +2,8 @@
 
 source "${JSON_SCHEMA_DEV_CELLS_DIR}/cells.sh"
 
+title "json-schema-dev  ·  demo 12: identifiers and refs"
+
 doc "what \$id is for" << 'END_DOC'
 $id declares the identity of a schema — a URI that names it. It is an
 identifier, not a location: nothing is ever fetched from it, and it may

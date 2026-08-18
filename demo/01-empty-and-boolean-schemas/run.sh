@@ -2,6 +2,8 @@
 
 source "${JSON_SCHEMA_DEV_CELLS_DIR}/cells.sh"
 
+title "json-schema-dev  ·  demo 01: empty and boolean schemas"
+
 doc "a schema need not be an object" << 'END_DOC'
 A schema is itself JSON -- a single JSON document. And what may serve
 as a schema is specified the way anything in JSON is specified: by a

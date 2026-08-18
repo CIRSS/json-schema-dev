@@ -1,3 +1,8 @@
+##############################################################################
+#
+#   json-schema-dev  ·  demo 02: types and properties
+#
+##############################################################################
 
 ===== [1] "type" names which kind of value the instance must be ==============
 
@@ -24,62 +29,62 @@ object with one member and a bare string. Each schema accepts the
 instance of its kind and rejects the other; the pair of results shows
 that "type" constrains the kind of the whole instance and nothing more.
 
-===== [3] the object instance ================================================
+----- [3] the object instance ------------------------------------------------
 
 $ cat instance-object.json
 {"a": 1}
 
-===== [4] a schema requiring an object =======================================
+----- [4] a schema requiring an object ---------------------------------------
 
 $ cat schema-type-object.json
 {"type": "object"}
 
-===== [5] jsonschema (Python): object vs "type": "object" ====================
+----- [5] jsonschema (Python): object vs "type": "object" --------------------
 
 $ jsonschema-validate --schema schema-type-object.json --instance instance-object.json
 VALID
 
-===== [6] ajv (JavaScript): object vs "type": "object" =======================
+----- [6] ajv (JavaScript): object vs "type": "object" -----------------------
 
 $ ajv-validate --schema schema-type-object.json --instance instance-object.json
 VALID
 
-===== [7] the string instance ================================================
+----- [7] the string instance ------------------------------------------------
 
 $ cat instance-string.json
 "hello"
 
-===== [8] jsonschema (Python): string vs "type": "object" ====================
+----- [8] jsonschema (Python): string vs "type": "object" --------------------
 
 $ jsonschema-validate --schema schema-type-object.json --instance instance-string.json
 INVALID: 'hello' is not of type 'object'
 
-===== [9] ajv (JavaScript): string vs "type": "object" =======================
+----- [9] ajv (JavaScript): string vs "type": "object" -----------------------
 
 $ ajv-validate --schema schema-type-object.json --instance instance-string.json
 INVALID: must be object
 
-===== [10] a schema requiring a string =======================================
+----- [10] a schema requiring a string ---------------------------------------
 
 $ cat schema-type-string.json
 {"type": "string"}
 
-===== [11] jsonschema (Python): object vs "type": "string" ===================
+----- [11] jsonschema (Python): object vs "type": "string" -------------------
 
 $ jsonschema-validate --schema schema-type-string.json --instance instance-object.json
 INVALID: {'a': 1} is not of type 'string'
 
-===== [12] ajv (JavaScript): object vs "type": "string" ======================
+----- [12] ajv (JavaScript): object vs "type": "string" ----------------------
 
 $ ajv-validate --schema schema-type-string.json --instance instance-object.json
 INVALID: must be string
 
-===== [13] jsonschema (Python): string vs "type": "string" ===================
+----- [13] jsonschema (Python): string vs "type": "string" -------------------
 
 $ jsonschema-validate --schema schema-type-string.json --instance instance-string.json
 VALID
 
-===== [14] ajv (JavaScript): string vs "type": "string" ======================
+----- [14] ajv (JavaScript): string vs "type": "string" ----------------------
 
 $ ajv-validate --schema schema-type-string.json --instance instance-string.json
 VALID
@@ -99,42 +104,42 @@ One schema whose "type" lists string and number is checked against three
 instances: the string and object from above, and a bare number. The
 string and the number are accepted; the object is rejected.
 
-===== [17] a schema allowing a string or a number ============================
+----- [17] a schema allowing a string or a number ----------------------------
 
 $ cat schema-type-string-or-number.json
 {"type": ["string", "number"]}
 
-===== [18] jsonschema (Python): string vs the list ===========================
+----- [18] jsonschema (Python): string vs the list ---------------------------
 
 $ jsonschema-validate --schema schema-type-string-or-number.json --instance instance-string.json
 VALID
 
-===== [19] ajv (JavaScript): string vs the list ==============================
+----- [19] ajv (JavaScript): string vs the list ------------------------------
 
 $ ajv-validate --schema schema-type-string-or-number.json --instance instance-string.json
 VALID
 
-===== [20] the number instance ===============================================
+----- [20] the number instance -----------------------------------------------
 
 $ cat instance-number.json
 5
 
-===== [21] jsonschema (Python): number vs the list ===========================
+----- [21] jsonschema (Python): number vs the list ---------------------------
 
 $ jsonschema-validate --schema schema-type-string-or-number.json --instance instance-number.json
 VALID
 
-===== [22] ajv (JavaScript): number vs the list ==============================
+----- [22] ajv (JavaScript): number vs the list ------------------------------
 
 $ ajv-validate --schema schema-type-string-or-number.json --instance instance-number.json
 VALID
 
-===== [23] jsonschema (Python): object vs the list ===========================
+----- [23] jsonschema (Python): object vs the list ---------------------------
 
 $ jsonschema-validate --schema schema-type-string-or-number.json --instance instance-object.json
 INVALID: {'a': 1} is not of type 'string', 'number'
 
-===== [24] ajv (JavaScript): object vs the list ==============================
+----- [24] ajv (JavaScript): object vs the list ------------------------------
 
 $ ajv-validate --schema schema-type-string-or-number.json --instance instance-object.json
 INVALID: must be string,number
@@ -163,7 +168,7 @@ One schema, requiring an object whose member "a", if present, is a
 number, is checked against two instances that differ only in the value
 of "a": a number in one, a string in the other.
 
-===== [27] the schema ("a", if present, must be a number) ====================
+----- [27] the schema ("a", if present, must be a number) --------------------
 
 $ cat schema-properties.json
 {
@@ -171,32 +176,32 @@ $ cat schema-properties.json
   "properties": { "a": { "type": "number" } }
 }
 
-===== [28] "a" is a number ===================================================
+----- [28] "a" is a number ---------------------------------------------------
 
 $ cat instance-object.json
 {"a": 1}
 
-===== [29] jsonschema (Python): "a" is a number ==============================
+----- [29] jsonschema (Python): "a" is a number ------------------------------
 
 $ jsonschema-validate --schema schema-properties.json --instance instance-object.json
 VALID
 
-===== [30] ajv (JavaScript): "a" is a number =================================
+----- [30] ajv (JavaScript): "a" is a number ---------------------------------
 
 $ ajv-validate --schema schema-properties.json --instance instance-object.json
 VALID
 
-===== [31] "a" is a string ===================================================
+----- [31] "a" is a string ---------------------------------------------------
 
 $ cat instance-string-member.json
 {"a": "x"}
 
-===== [32] jsonschema (Python): "a" is a string ==============================
+----- [32] jsonschema (Python): "a" is a string ------------------------------
 
 $ jsonschema-validate --schema schema-properties.json --instance instance-string-member.json
 INVALID: /a: 'x' is not of type 'number'
 
-===== [33] ajv (JavaScript): "a" is a string =================================
+----- [33] ajv (JavaScript): "a" is a string ---------------------------------
 
 $ ajv-validate --schema schema-properties.json --instance instance-string-member.json
 INVALID: /a: must be number
@@ -222,32 +227,32 @@ Two more instances against the same schema. The first omits "a"
 entirely; the second has "a" alongside a member the schema never
 mentions. Both are accepted.
 
-===== [36] "a" omitted =======================================================
+----- [36] "a" omitted -------------------------------------------------------
 
 $ cat instance-empty.json
 {}
 
-===== [37] jsonschema (Python): "a" omitted ==================================
+----- [37] jsonschema (Python): "a" omitted ----------------------------------
 
 $ jsonschema-validate --schema schema-properties.json --instance instance-empty.json
 VALID
 
-===== [38] ajv (JavaScript): "a" omitted =====================================
+----- [38] ajv (JavaScript): "a" omitted -------------------------------------
 
 $ ajv-validate --schema schema-properties.json --instance instance-empty.json
 VALID
 
-===== [39] an unlisted extra member ==========================================
+----- [39] an unlisted extra member ------------------------------------------
 
 $ cat instance-extra.json
 {"a": 1, "b": 2}
 
-===== [40] jsonschema (Python): extra member =================================
+----- [40] jsonschema (Python): extra member ---------------------------------
 
 $ jsonschema-validate --schema schema-properties.json --instance instance-extra.json
 VALID
 
-===== [41] ajv (JavaScript): extra member ====================================
+----- [41] ajv (JavaScript): extra member ------------------------------------
 
 $ ajv-validate --schema schema-properties.json --instance instance-extra.json
 VALID

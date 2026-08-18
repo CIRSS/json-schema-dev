@@ -2,6 +2,8 @@
 
 source "${JSON_SCHEMA_DEV_CELLS_DIR}/cells.sh"
 
+title "json-schema-dev  ·  demo 06: annotations vs assertions"
+
 doc "keywords are either assertions or annotations" << 'END_DOC'
 Every keyword met so far -- "type", "properties", "items", "required",
 "minLength", and the rest -- is an assertion: a keyword that can make
@@ -80,13 +82,14 @@ which rejects what does not match.
 
 The "pattern" below -- runs of letters and digits separated by dots,
 one @, then a domain of one or more dotted runs ending in a run of
-letters -- is not a definition of an email address; no short regular expression is, and this one excludes
-hyphens, underscores, and plus signs that real addresses may contain.
-Its virtue is different: what it checks is exactly what it says, no
-more and no less, on every validator alike. "format": "email"
-promises a correctness that no implementation quite delivers, and
-each delivers differently. A "pattern" makes the author decide, and
-disclose, how much of the syntax is actually being enforced.
+letters -- is not a definition of an email address; no short regular
+expression is, and this one excludes hyphens, underscores, and plus
+signs that real addresses may contain. Its virtue is different: what
+it checks is exactly what it says, no more and no less, on every
+validator alike. "format": "email" promises a correctness that no
+implementation quite delivers, and each delivers differently. A
+"pattern" makes the author decide, and disclose, how much of the
+syntax is actually being enforced.
 
 The rule that follows: whatever must be enforced, write as a
 "pattern". Use "format" to say what a value means, never to make it

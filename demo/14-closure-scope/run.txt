@@ -1,3 +1,8 @@
+##############################################################################
+#
+#   json-schema-dev  ·  demo 14: closure scope
+#
+##############################################################################
 
 ===== [1] how far does closure reach? ========================================
 
@@ -29,14 +34,14 @@ This is what makes unevaluatedProperties the keyword that composes. A
 schema built from named parts can only be closed by something that can see
 what the parts claimed.
 
-===== [3] the instance =======================================================
+----- [3] the instance -------------------------------------------------------
 
 $ cat instance.json
 {
   "a": "hello"
 }
 
-===== [4] closing with unevaluatedProperties =================================
+----- [4] closing with unevaluatedProperties ---------------------------------
 
 $ cat schema-unevaluated.json
 {
@@ -50,17 +55,17 @@ $ cat schema-unevaluated.json
   "unevaluatedProperties": false
 }
 
-===== [5] jsonschema (Python): unevaluatedProperties =========================
+----- [5] jsonschema (Python): unevaluatedProperties -------------------------
 
 $ jsonschema-validate --schema schema-unevaluated.json --instance instance.json
 VALID
 
-===== [6] ajv (JavaScript): unevaluatedProperties ============================
+----- [6] ajv (JavaScript): unevaluatedProperties ----------------------------
 
 $ ajv-validate --schema schema-unevaluated.json --instance instance.json
 VALID
 
-===== [7] closing with additionalProperties ==================================
+----- [7] closing with additionalProperties ----------------------------------
 
 $ cat schema-additional.json
 {
@@ -74,12 +79,12 @@ $ cat schema-additional.json
   "additionalProperties": false
 }
 
-===== [8] jsonschema (Python): additionalProperties ==========================
+----- [8] jsonschema (Python): additionalProperties --------------------------
 
 $ jsonschema-validate --schema schema-additional.json --instance instance.json
 INVALID: Additional properties are not allowed ('a' was unexpected)
 
-===== [9] ajv (JavaScript): additionalProperties =============================
+----- [9] ajv (JavaScript): additionalProperties -----------------------------
 
 $ ajv-validate --schema schema-additional.json --instance instance.json
 INVALID: must NOT have additional properties
@@ -101,14 +106,14 @@ be explained by the closure not working at all. The pair is what locates
 the effect — same instance, same root closure, verdict turning solely on
 where the inner closure is declared.
 
-===== [11] the instance ======================================================
+----- [11] the instance ------------------------------------------------------
 
 $ cat instance-nested.json
 {
   "inner": { "x": 1, "y": 2 }
 }
 
-===== [12] root closed, inner open ===========================================
+----- [12] root closed, inner open -------------------------------------------
 
 $ cat schema-nested.json
 {
@@ -122,17 +127,17 @@ $ cat schema-nested.json
   "unevaluatedProperties": false
 }
 
-===== [13] jsonschema (Python): inner open ===================================
+----- [13] jsonschema (Python): inner open -----------------------------------
 
 $ jsonschema-validate --schema schema-nested.json --instance instance-nested.json
 VALID
 
-===== [14] ajv (JavaScript): inner open ======================================
+----- [14] ajv (JavaScript): inner open --------------------------------------
 
 $ ajv-validate --schema schema-nested.json --instance instance-nested.json
 VALID
 
-===== [15] root closed, inner closed too =====================================
+----- [15] root closed, inner closed too -------------------------------------
 
 $ cat schema-nested-closed.json
 {
@@ -147,12 +152,12 @@ $ cat schema-nested-closed.json
   "unevaluatedProperties": false
 }
 
-===== [16] jsonschema (Python): inner closed =================================
+----- [16] jsonschema (Python): inner closed ---------------------------------
 
 $ jsonschema-validate --schema schema-nested-closed.json --instance instance-nested.json
 INVALID: /inner: Unevaluated properties are not allowed ('y' was unexpected)
 
-===== [17] ajv (JavaScript): inner closed ====================================
+----- [17] ajv (JavaScript): inner closed ------------------------------------
 
 $ ajv-validate --schema schema-nested-closed.json --instance instance-nested.json
 INVALID: /inner: must NOT have unevaluated properties

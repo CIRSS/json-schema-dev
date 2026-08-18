@@ -1,3 +1,8 @@
+##############################################################################
+#
+#   json-schema-dev  ·  demo 12: identifiers and refs
+#
+##############################################################################
 
 ===== [1] what $id is for ====================================================
 
@@ -13,7 +18,7 @@ behaviour. The first two schemas below make that concrete.
 Every instance in this demo is the same object, so that only the schema's
 identifiers vary.
 
-===== [2] the instance =======================================================
+----- [2] the instance -------------------------------------------------------
 
 $ cat instance.json
 {
@@ -25,7 +30,7 @@ $ cat instance.json
 Two schemas, identical but for the presence of an $id — and that $id names
 a host that could not be reached even if something tried. Same verdict.
 
-===== [4] no $id at all ======================================================
+----- [4] no $id at all ------------------------------------------------------
 
 $ cat schema-no-id.json
 {
@@ -35,17 +40,17 @@ $ cat schema-no-id.json
   "$ref": "#/$defs/named"
 }
 
-===== [5] jsonschema (Python): no $id ========================================
+----- [5] jsonschema (Python): no $id ----------------------------------------
 
 $ jsonschema-validate --schema schema-no-id.json --instance instance.json
 VALID
 
-===== [6] ajv (JavaScript): no $id ===========================================
+----- [6] ajv (JavaScript): no $id -------------------------------------------
 
 $ ajv-validate --schema schema-no-id.json --instance instance.json
 VALID
 
-===== [7] an $id at an unreachable URI =======================================
+----- [7] an $id at an unreachable URI ---------------------------------------
 
 $ cat schema-unreachable-id.json
 {
@@ -56,12 +61,12 @@ $ cat schema-unreachable-id.json
   "$ref": "#/$defs/named"
 }
 
-===== [8] jsonschema (Python): unreachable $id ===============================
+----- [8] jsonschema (Python): unreachable $id -------------------------------
 
 $ jsonschema-validate --schema schema-unreachable-id.json --instance instance.json
 VALID
 
-===== [9] ajv (JavaScript): unreachable $id ==================================
+----- [9] ajv (JavaScript): unreachable $id ----------------------------------
 
 $ ajv-validate --schema schema-unreachable-id.json --instance instance.json
 VALID
@@ -79,7 +84,7 @@ Both schemas below constrain a to be a number, so the string instance is
 rejected — which is how you can tell the reference resolved rather than
 being quietly skipped. A $ref that went nowhere would not produce this.
 
-===== [11] $id on the subschema, $ref by URI =================================
+----- [11] $id on the subschema, $ref by URI ---------------------------------
 
 $ cat schema-subschema-id.json
 {
@@ -92,17 +97,17 @@ $ cat schema-subschema-id.json
   "$ref": "https://example.org/named"
 }
 
-===== [12] jsonschema (Python): $ref by URI ==================================
+----- [12] jsonschema (Python): $ref by URI ----------------------------------
 
 $ jsonschema-validate --schema schema-subschema-id.json --instance instance.json
 INVALID: /a: 'hello' is not of type 'number'
 
-===== [13] ajv (JavaScript): $ref by URI =====================================
+----- [13] ajv (JavaScript): $ref by URI -------------------------------------
 
 $ ajv-validate --schema schema-subschema-id.json --instance instance.json
 INVALID: /a: must be number
 
-===== [14] $anchor, $ref by plain name =======================================
+----- [14] $anchor, $ref by plain name ---------------------------------------
 
 $ cat schema-anchor.json
 {
@@ -115,12 +120,12 @@ $ cat schema-anchor.json
   "$ref": "#named"
 }
 
-===== [15] jsonschema (Python): $ref by anchor ===============================
+----- [15] jsonschema (Python): $ref by anchor -------------------------------
 
 $ jsonschema-validate --schema schema-anchor.json --instance instance.json
 INVALID: /a: 'hello' is not of type 'number'
 
-===== [16] ajv (JavaScript): $ref by anchor ==================================
+----- [16] ajv (JavaScript): $ref by anchor ----------------------------------
 
 $ ajv-validate --schema schema-anchor.json --instance instance.json
 INVALID: /a: must be number
@@ -143,7 +148,7 @@ compiling the schema and calls it an invalid schema, whereas jsonschema
 resolves lazily during validation, so the failure arrives later and is
 described differently. Same conclusion, different stage.
 
-===== [18] a relative $ref ===================================================
+----- [18] a relative $ref ---------------------------------------------------
 
 $ cat schema-relative-ref.json
 {
@@ -154,12 +159,12 @@ $ cat schema-relative-ref.json
   "$ref": "named"
 }
 
-===== [19] jsonschema (Python): relative $ref ================================
+----- [19] jsonschema (Python): relative $ref --------------------------------
 
 $ jsonschema-validate --schema schema-relative-ref.json --instance instance.json
 jsonschema-validate: error: schema-relative-ref.json contains an unresolvable $ref: Unresolvable: named
 
-===== [20] ajv (JavaScript): relative $ref ===================================
+----- [20] ajv (JavaScript): relative $ref -----------------------------------
 
 $ ajv-validate --schema schema-relative-ref.json --instance instance.json
 ajv-validate: error: schema-relative-ref.json is not a valid JSON Schema: can't resolve reference named from id https://example.org/schemas/root

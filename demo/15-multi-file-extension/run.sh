@@ -2,6 +2,8 @@
 
 source "${JSON_SCHEMA_DEV_CELLS_DIR}/cells.sh"
 
+title "json-schema-dev  ·  demo 15: multi file extension"
+
 doc "a base schema in its own file, validating on its own" << 'END_DOC'
 Everything so far lived in one file. This demo splits a schema across two:
 a base that stands alone, and an overlay that extends it. The base below

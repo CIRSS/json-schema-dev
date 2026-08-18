@@ -1,3 +1,8 @@
+##############################################################################
+#
+#   json-schema-dev  ·  demo 05: null and applicability
+#
+##############################################################################
 
 ===== [1] most keywords apply only to instances of one kind ==================
 
@@ -40,37 +45,37 @@ schemas differing only in whether "null" is named in "type":
 {"type": "string"} rejects the instance, and {"type": ["string",
 "null"]} accepts it.
 
-===== [4] the instance =======================================================
+----- [4] the instance -------------------------------------------------------
 
 $ cat instance-null.json
 null
 
-===== [5] "type" is string ===================================================
+----- [5] "type" is string ---------------------------------------------------
 
 $ cat schema-type-string.json
 { "type": "string" }
 
-===== [6] jsonschema (Python): null vs string ================================
+----- [6] jsonschema (Python): null vs string --------------------------------
 
 $ jsonschema-validate --schema schema-type-string.json --instance instance-null.json
 INVALID: None is not of type 'string'
 
-===== [7] ajv (JavaScript): null vs string ===================================
+----- [7] ajv (JavaScript): null vs string -----------------------------------
 
 $ ajv-validate --schema schema-type-string.json --instance instance-null.json
 INVALID: must be string
 
-===== [8] "type" is string or null ===========================================
+----- [8] "type" is string or null -------------------------------------------
 
 $ cat schema-type-string-or-null.json
 { "type": ["string", "null"] }
 
-===== [9] jsonschema (Python): null vs string-or-null ========================
+----- [9] jsonschema (Python): null vs string-or-null ------------------------
 
 $ jsonschema-validate --schema schema-type-string-or-null.json --instance instance-null.json
 VALID
 
-===== [10] ajv (JavaScript): null vs string-or-null ==========================
+----- [10] ajv (JavaScript): null vs string-or-null --------------------------
 
 $ ajv-validate --schema schema-type-string-or-null.json --instance instance-null.json
 VALID
@@ -101,47 +106,47 @@ characters, is checked against three instances: a two-character
 string, an eleven-character string, and null. The short string is
 rejected; the long string and null are both accepted.
 
-===== [13] a string of at least 5 characters, or null ========================
+----- [13] a string of at least 5 characters, or null ------------------------
 
 $ cat schema-type-string-or-null-minlength.json
 { "type": ["string", "null"], "minLength": 5 }
 
-===== [14] a two-character string ============================================
+----- [14] a two-character string --------------------------------------------
 
 $ cat instance-short.json
 "hi"
 
-===== [15] jsonschema (Python): short string =================================
+----- [15] jsonschema (Python): short string ---------------------------------
 
 $ jsonschema-validate --schema schema-type-string-or-null-minlength.json --instance instance-short.json
 INVALID: 'hi' is too short
 
-===== [16] ajv (JavaScript): short string ====================================
+----- [16] ajv (JavaScript): short string ------------------------------------
 
 $ ajv-validate --schema schema-type-string-or-null-minlength.json --instance instance-short.json
 INVALID: must NOT have fewer than 5 characters
 
-===== [17] an eleven-character string ========================================
+----- [17] an eleven-character string ----------------------------------------
 
 $ cat instance-long.json
 "hello there"
 
-===== [18] jsonschema (Python): long string ==================================
+----- [18] jsonschema (Python): long string ----------------------------------
 
 $ jsonschema-validate --schema schema-type-string-or-null-minlength.json --instance instance-long.json
 VALID
 
-===== [19] ajv (JavaScript): long string =====================================
+----- [19] ajv (JavaScript): long string -------------------------------------
 
 $ ajv-validate --schema schema-type-string-or-null-minlength.json --instance instance-long.json
 VALID
 
-===== [20] jsonschema (Python): null =========================================
+----- [20] jsonschema (Python): null -----------------------------------------
 
 $ jsonschema-validate --schema schema-type-string-or-null-minlength.json --instance instance-null.json
 VALID
 
-===== [21] ajv (JavaScript): null ============================================
+----- [21] ajv (JavaScript): null --------------------------------------------
 
 $ ajv-validate --schema schema-type-string-or-null-minlength.json --instance instance-null.json
 VALID
@@ -169,32 +174,32 @@ The null instance is checked against two schemas of one keyword each:
 an "enum" of two strings, which rejects it, and a "minimum" of 5,
 which accepts it.
 
-===== [24] an enumeration of two strings =====================================
+----- [24] an enumeration of two strings -------------------------------------
 
 $ cat schema-enum.json
 { "enum": ["x", "y"] }
 
-===== [25] jsonschema (Python): null vs "enum" ===============================
+----- [25] jsonschema (Python): null vs "enum" -------------------------------
 
 $ jsonschema-validate --schema schema-enum.json --instance instance-null.json
 INVALID: None is not one of ['x', 'y']
 
-===== [26] ajv (JavaScript): null vs "enum" ==================================
+----- [26] ajv (JavaScript): null vs "enum" ----------------------------------
 
 $ ajv-validate --schema schema-enum.json --instance instance-null.json
 INVALID: must be equal to one of the allowed values
 
-===== [27] a numeric lower bound =============================================
+----- [27] a numeric lower bound ---------------------------------------------
 
 $ cat schema-minimum.json
 { "minimum": 5 }
 
-===== [28] jsonschema (Python): null vs "minimum" ============================
+----- [28] jsonschema (Python): null vs "minimum" ----------------------------
 
 $ jsonschema-validate --schema schema-minimum.json --instance instance-null.json
 VALID
 
-===== [29] ajv (JavaScript): null vs "minimum" ===============================
+----- [29] ajv (JavaScript): null vs "minimum" -------------------------------
 
 $ ajv-validate --schema schema-minimum.json --instance instance-null.json
 VALID

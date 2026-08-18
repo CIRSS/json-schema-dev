@@ -2,6 +2,8 @@
 
 source "${JSON_SCHEMA_DEV_CELLS_DIR}/cells.sh"
 
+title "json-schema-dev  ·  demo 14: closure scope"
+
 doc "how far does closure reach?" << 'END_DOC'
 Demo 13 showed unevaluatedProperties: false closing an object over allOf.
 That raises the question this demo answers: how far does "evaluated" reach?

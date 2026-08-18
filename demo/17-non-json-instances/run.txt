@@ -1,3 +1,8 @@
+##############################################################################
+#
+#   json-schema-dev  ·  demo 17: non json instances
+#
+##############################################################################
 
 ===== [1] a non-JSON document gets a verdict, not an error ===================
 
@@ -19,32 +24,32 @@ A missing file, by contrast, is operational -- nothing was delivered to be
 judged -- and remains an error. The two probe pairs below differ in
 exactly one way: whether the named instance file exists.
 
-===== [2] the schema (vacuous) ===============================================
+----- [2] the schema (vacuous) -----------------------------------------------
 
 $ cat schema-empty.json
 {}
 
-===== [3] a truncated document ===============================================
+----- [3] a truncated document -----------------------------------------------
 
 $ cat instance-truncated.json
 {"a":
 
-===== [4] jsonschema (Python): not JSON ======================================
+----- [4] jsonschema (Python): not JSON --------------------------------------
 
 $ jsonschema-validate --schema schema-empty.json --instance instance-truncated.json
 INVALID: instance is not valid JSON: Expecting value: line 2 column 1 (char 6)
 
-===== [5] ajv (JavaScript): not JSON =========================================
+----- [5] ajv (JavaScript): not JSON -----------------------------------------
 
 $ ajv-validate --schema schema-empty.json --instance instance-truncated.json
 INVALID: instance is not valid JSON: Unexpected end of JSON input
 
-===== [6] jsonschema (Python): missing file ==================================
+----- [6] jsonschema (Python): missing file ----------------------------------
 
 $ jsonschema-validate --schema schema-empty.json --instance no-such-file.json
 jsonschema-validate: error: instance file not found: no-such-file.json
 
-===== [7] ajv (JavaScript): missing file =====================================
+----- [7] ajv (JavaScript): missing file -------------------------------------
 
 $ ajv-validate --schema schema-empty.json --instance no-such-file.json
 ajv-validate: error: instance file not found: no-such-file.json

@@ -2,6 +2,8 @@
 
 source "${JSON_SCHEMA_DEV_CELLS_DIR}/cells.sh"
 
+title "json-schema-dev  ·  demo 05: null and applicability"
+
 doc "most keywords apply only to instances of one kind" << 'END_DOC'
 Most validation keywords are scoped to one kind of value. "minLength",
 whose value is an integer, is the least number of characters a string

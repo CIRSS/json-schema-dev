@@ -2,6 +2,8 @@
 
 source "${JSON_SCHEMA_DEV_CELLS_DIR}/cells.sh"
 
+title "json-schema-dev  ·  demo 11: defs and refs"
+
 doc "a definition written once, enforced everywhere it is referenced" << 'END_DOC'
 $defs holds named subschemas; $ref uses one by name. Together they are the
 schema language's type definitions: the schema below defines Hex once —

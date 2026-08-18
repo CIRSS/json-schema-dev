@@ -2,6 +2,8 @@
 
 source "${JSON_SCHEMA_DEV_CELLS_DIR}/cells.sh"
 
+title "json-schema-dev  ·  demo 18: duplicate member names"
+
 doc "duplicate member names vanish before any schema can see them" << 'END_DOC'
 JSON's grammar does not forbid an object from repeating a member name --
 RFC 8259 says only that names SHOULD be unique -- and parsers cope by

@@ -2,6 +2,8 @@
 
 source "${JSON_SCHEMA_DEV_CELLS_DIR}/cells.sh"
 
+title "json-schema-dev  ·  demo 10: tagged unions"
+
 doc "a discriminator property selects which constraints apply" << 'END_DOC'
 Records that come in variants usually carry a tag naming which variant this
 is — here, kind — with the rest of the record's shape depending on it.

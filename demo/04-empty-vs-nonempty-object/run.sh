@@ -2,6 +2,8 @@
 
 source "${JSON_SCHEMA_DEV_CELLS_DIR}/cells.sh"
 
+title "json-schema-dev  ·  demo 04: empty vs nonempty object"
+
 doc "\"required\" is what makes a member mandatory" << 'END_DOC'
 Demo 02 showed that "properties" is conditional: it says what a member
 must look like if the member is present, and it does not require any

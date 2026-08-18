@@ -2,6 +2,8 @@
 
 source "${JSON_SCHEMA_DEV_CELLS_DIR}/cells.sh"
 
+title "json-schema-dev  ·  demo 02: types and properties"
+
 doc "\"type\" names which kind of value the instance must be" << 'END_DOC'
 Demo 01 introduced keywords: the member names that JSON Schema itself
 defines. Each keyword has a fixed meaning, and each requires its value

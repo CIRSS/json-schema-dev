@@ -1,3 +1,8 @@
+##############################################################################
+#
+#   json-schema-dev  ·  demo 04: empty vs nonempty object
+#
+##############################################################################
 
 ===== [1] "required" is what makes a member mandatory ========================
 
@@ -25,52 +30,52 @@ checked against the empty object. The first accepts it; the second
 rejects it. The second is then checked against {"id": "x"}, which it
 accepts.
 
-===== [3] a schema describing "id" but not requiring it ======================
+----- [3] a schema describing "id" but not requiring it ----------------------
 
 $ cat schema-properties-id.json
 { "type": "object", "properties": { "id": { "type": "string" } } }
 
-===== [4] the empty object ===================================================
+----- [4] the empty object ---------------------------------------------------
 
 $ cat instance-empty.json
 {}
 
-===== [5] jsonschema (Python): {} vs "properties" only =======================
+----- [5] jsonschema (Python): {} vs "properties" only -----------------------
 
 $ jsonschema-validate --schema schema-properties-id.json --instance instance-empty.json
 VALID
 
-===== [6] ajv (JavaScript): {} vs "properties" only ==========================
+----- [6] ajv (JavaScript): {} vs "properties" only --------------------------
 
 $ ajv-validate --schema schema-properties-id.json --instance instance-empty.json
 VALID
 
-===== [7] the same schema with "id" required =================================
+----- [7] the same schema with "id" required ---------------------------------
 
 $ cat schema-properties-required-id.json
 { "type": "object", "properties": { "id": { "type": "string" } }, "required": ["id"] }
 
-===== [8] jsonschema (Python): {} vs "required" ==============================
+----- [8] jsonschema (Python): {} vs "required" ------------------------------
 
 $ jsonschema-validate --schema schema-properties-required-id.json --instance instance-empty.json
 INVALID: 'id' is a required property
 
-===== [9] ajv (JavaScript): {} vs "required" =================================
+----- [9] ajv (JavaScript): {} vs "required" ---------------------------------
 
 $ ajv-validate --schema schema-properties-required-id.json --instance instance-empty.json
 INVALID: must have required property 'id'
 
-===== [10] an object with "id" present =======================================
+----- [10] an object with "id" present ---------------------------------------
 
 $ cat instance-id-string.json
 { "id": "x" }
 
-===== [11] jsonschema (Python): "id" present =================================
+----- [11] jsonschema (Python): "id" present ---------------------------------
 
 $ jsonschema-validate --schema schema-properties-required-id.json --instance instance-id-string.json
 VALID
 
-===== [12] ajv (JavaScript): "id" present ====================================
+----- [12] ajv (JavaScript): "id" present ------------------------------------
 
 $ ajv-validate --schema schema-properties-required-id.json --instance instance-id-string.json
 VALID
@@ -97,32 +102,32 @@ The instance {"id": null} is checked against two schemas: one with
 "properties" entry types "id" as a string, which rejects it. The
 difference is the value constraint, not "required".
 
-===== [15] an object whose "id" is null ======================================
+----- [15] an object whose "id" is null --------------------------------------
 
 $ cat instance-id-null.json
 { "id": null }
 
-===== [16] a schema requiring "id" and nothing more ==========================
+----- [16] a schema requiring "id" and nothing more --------------------------
 
 $ cat schema-required-only.json
 { "type": "object", "required": ["id"] }
 
-===== [17] jsonschema (Python): null vs "required" only ======================
+----- [17] jsonschema (Python): null vs "required" only ----------------------
 
 $ jsonschema-validate --schema schema-required-only.json --instance instance-id-null.json
 VALID
 
-===== [18] ajv (JavaScript): null vs "required" only =========================
+----- [18] ajv (JavaScript): null vs "required" only -------------------------
 
 $ ajv-validate --schema schema-required-only.json --instance instance-id-null.json
 VALID
 
-===== [19] jsonschema (Python): null vs "required" + "type" ==================
+----- [19] jsonschema (Python): null vs "required" + "type" ------------------
 
 $ jsonschema-validate --schema schema-properties-required-id.json --instance instance-id-null.json
 INVALID: /id: None is not of type 'string'
 
-===== [20] ajv (JavaScript): null vs "required" + "type" =====================
+----- [20] ajv (JavaScript): null vs "required" + "type" ---------------------
 
 $ ajv-validate --schema schema-properties-required-id.json --instance instance-id-null.json
 INVALID: /id: must be string

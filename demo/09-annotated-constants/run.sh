@@ -2,6 +2,8 @@
 
 source "${JSON_SCHEMA_DEV_CELLS_DIR}/cells.sh"
 
+title "json-schema-dev  ·  demo 09: annotated constants"
+
 doc "two ways to say 'one of these exact values'" << 'END_DOC'
 A fixed set of allowed values is usually written as an enum. There is a
 second spelling: oneOf over subschemas that each pin a single value with

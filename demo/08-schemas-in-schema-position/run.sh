@@ -2,6 +2,8 @@
 
 source "${JSON_SCHEMA_DEV_CELLS_DIR}/cells.sh"
 
+title "json-schema-dev  ·  demo 08: schemas in schema position"
+
 doc "additionalProperties holds a schema, not a flag" << 'END_DOC'
 Demo 01 showed that true and false are schemas. This demo shows where that
 fact is actually used, and why the language bothers to have it.

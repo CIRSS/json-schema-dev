@@ -1,3 +1,8 @@
+##############################################################################
+#
+#   json-schema-dev  ·  demo 09: annotated constants
+#
+##############################################################################
 
 ===== [1] two ways to say 'one of these exact values' ========================
 
@@ -13,12 +18,12 @@ description saying what choosing it means. The documentation lives next to
 the value it documents and travels with the schema into editors, viewers,
 and generated docs.
 
-===== [2] the enum schema ====================================================
+----- [2] the enum schema ----------------------------------------------------
 
 $ cat schema-enum.json
 {"enum": ["draft", "final"]}
 
-===== [3] the annotated oneOf schema =========================================
+----- [3] the annotated oneOf schema -----------------------------------------
 
 $ cat schema-oneof.json
 {
@@ -28,27 +33,27 @@ $ cat schema-oneof.json
   ]
 }
 
-===== [4] a value in the set =================================================
+----- [4] a value in the set -------------------------------------------------
 
 $ cat instance-known.json
 "draft"
 
-===== [5] jsonschema (Python): enum, known ===================================
+----- [5] jsonschema (Python): enum, known -----------------------------------
 
 $ jsonschema-validate --schema schema-enum.json --instance instance-known.json
 VALID
 
-===== [6] ajv (JavaScript): enum, known ======================================
+----- [6] ajv (JavaScript): enum, known --------------------------------------
 
 $ ajv-validate --schema schema-enum.json --instance instance-known.json
 VALID
 
-===== [7] jsonschema (Python): oneOf, known ==================================
+----- [7] jsonschema (Python): oneOf, known ----------------------------------
 
 $ jsonschema-validate --schema schema-oneof.json --instance instance-known.json
 VALID
 
-===== [8] ajv (JavaScript): oneOf, known =====================================
+----- [8] ajv (JavaScript): oneOf, known -------------------------------------
 
 $ ajv-validate --schema schema-oneof.json --instance instance-known.json
 VALID
@@ -62,27 +67,27 @@ one line, while the oneOf failure reports each branch's disappointment
 separately before concluding. That verbosity is the cost of the annotated
 form, and a message map or report layer pays it, not the schema author.
 
-===== [10] a value outside the set ===========================================
+----- [10] a value outside the set -------------------------------------------
 
 $ cat instance-unknown.json
 "banana"
 
-===== [11] jsonschema (Python): enum, unknown ================================
+----- [11] jsonschema (Python): enum, unknown --------------------------------
 
 $ jsonschema-validate --schema schema-enum.json --instance instance-unknown.json
 INVALID: 'banana' is not one of ['draft', 'final']
 
-===== [12] ajv (JavaScript): enum, unknown ===================================
+----- [12] ajv (JavaScript): enum, unknown -----------------------------------
 
 $ ajv-validate --schema schema-enum.json --instance instance-unknown.json
 INVALID: must be equal to one of the allowed values
 
-===== [13] jsonschema (Python): oneOf, unknown ===============================
+----- [13] jsonschema (Python): oneOf, unknown -------------------------------
 
 $ jsonschema-validate --schema schema-oneof.json --instance instance-unknown.json
 INVALID: 'banana' is not valid under any of the given schemas
 
-===== [14] ajv (JavaScript): oneOf, unknown ==================================
+----- [14] ajv (JavaScript): oneOf, unknown ----------------------------------
 
 $ ajv-validate --schema schema-oneof.json --instance instance-unknown.json
 INVALID: must be equal to constant

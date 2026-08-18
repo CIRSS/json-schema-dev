@@ -2,6 +2,8 @@
 
 source "${JSON_SCHEMA_DEV_CELLS_DIR}/cells.sh"
 
+title "json-schema-dev  ·  demo 03: arrays items and minitems"
+
 doc "\"items\" constrains every element of an array" << 'END_DOC'
 Demo 02 described objects with "properties", which gives one schema
 per named member. Arrays have no member names -- their elements are

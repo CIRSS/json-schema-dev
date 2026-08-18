@@ -1,3 +1,8 @@
+##############################################################################
+#
+#   json-schema-dev  ·  demo 19: declared versions
+#
+##############################################################################
 
 ===== [1] a declared version is honored or refused, never reinterpreted ======
 
@@ -18,32 +23,32 @@ It exists for deliberately probing schemas written for other versions.
 
 The two command pairs below differ in exactly one way: the flag.
 
-===== [2] the instance =======================================================
+----- [2] the instance -------------------------------------------------------
 
 $ cat instance.json
 {"a": 1}
 
-===== [3] a schema declaring draft-07 ========================================
+----- [3] a schema declaring draft-07 ----------------------------------------
 
 $ cat schema-draft7.json
 {"$schema": "http://json-schema.org/draft-07/schema#", "type": "object"}
 
-===== [4] jsonschema (Python): declared version ==============================
+----- [4] jsonschema (Python): declared version ------------------------------
 
 $ jsonschema-validate --schema schema-draft7.json --instance instance.json
 jsonschema-validate: error: schema-draft7.json declares JSON Schema version "http://json-schema.org/draft-07/schema#"; only 2020-12 is supported (pass --ignore-declared-version to validate it as 2020-12 anyway)
 
-===== [5] ajv (JavaScript): declared version =================================
+----- [5] ajv (JavaScript): declared version ---------------------------------
 
 $ ajv-validate --schema schema-draft7.json --instance instance.json
 ajv-validate: error: schema-draft7.json declares JSON Schema version "http://json-schema.org/draft-07/schema#"; only 2020-12 is supported (pass --ignore-declared-version to validate it as 2020-12 anyway)
 
-===== [6] jsonschema (Python): with the override =============================
+----- [6] jsonschema (Python): with the override -----------------------------
 
 $ jsonschema-validate --schema schema-draft7.json --instance instance.json --ignore-declared-version
 VALID
 
-===== [7] ajv (JavaScript): with the override ================================
+----- [7] ajv (JavaScript): with the override --------------------------------
 
 $ ajv-validate --schema schema-draft7.json --instance instance.json --ignore-declared-version
 VALID

@@ -2,6 +2,8 @@
 
 source "${JSON_SCHEMA_DEV_CELLS_DIR}/cells.sh"
 
+title "json-schema-dev  ·  demo 16: custom error messages"
+
 doc "error messages are the validator's, not the schema's" << 'END_DOC'
 Nothing in the JSON Schema standard lets a schema say what its error
 messages should be. The standard fixes the structure of validation output —

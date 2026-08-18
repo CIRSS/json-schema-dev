@@ -1,3 +1,8 @@
+##############################################################################
+#
+#   json-schema-dev  ·  demo 13: unevaluated properties
+#
+##############################################################################
 
 ===== [1] unevaluatedProperties closes over allOf ============================
 
@@ -17,7 +22,7 @@ introduced in 2019-09: a draft-07 validator does not know it, and unknown
 keywords are ignored rather than rejected, so the same schema silently
 fails open — the invalid instance would pass.
 
-===== [2] the schema =========================================================
+----- [2] the schema ---------------------------------------------------------
 
 $ cat schema.json
 {
@@ -35,7 +40,7 @@ Property "c" appears in no allOf branch. The valid instance omits it and
 passes; the invalid instance carries it and is rejected by both validators,
 in different words but with the same verdict.
 
-===== [4] the valid instance =================================================
+----- [4] the valid instance -------------------------------------------------
 
 $ cat instance-valid.json
 {
@@ -43,17 +48,17 @@ $ cat instance-valid.json
   "b": "world"
 }
 
-===== [5] jsonschema (Python): valid instance ================================
+----- [5] jsonschema (Python): valid instance --------------------------------
 
 $ jsonschema-validate --schema schema.json --instance instance-valid.json
 VALID
 
-===== [6] ajv (JavaScript): valid instance ===================================
+----- [6] ajv (JavaScript): valid instance -----------------------------------
 
 $ ajv-validate --schema schema.json --instance instance-valid.json
 VALID
 
-===== [7] the invalid instance ===============================================
+----- [7] the invalid instance -----------------------------------------------
 
 $ cat instance-invalid.json
 {
@@ -62,12 +67,12 @@ $ cat instance-invalid.json
   "c": "unexpected"
 }
 
-===== [8] jsonschema (Python): invalid instance ==============================
+----- [8] jsonschema (Python): invalid instance ------------------------------
 
 $ jsonschema-validate --schema schema.json --instance instance-invalid.json
 INVALID: Unevaluated properties are not allowed ('c' was unexpected)
 
-===== [9] ajv (JavaScript): invalid instance =================================
+----- [9] ajv (JavaScript): invalid instance ---------------------------------
 
 $ ajv-validate --schema schema.json --instance instance-invalid.json
 INVALID: must NOT have unevaluated properties
@@ -89,34 +94,34 @@ schema with no required is closed and empty-able at the same time, which is
 almost never what the author meant. See demo 04 for the same trap without
 the composition.
 
-===== [11] only a ============================================================
+----- [11] only a ------------------------------------------------------------
 
 $ cat instance-only-a.json
 {
   "a": "hello"
 }
 
-===== [12] jsonschema (Python): only a =======================================
+----- [12] jsonschema (Python): only a ---------------------------------------
 
 $ jsonschema-validate --schema schema.json --instance instance-only-a.json
 VALID
 
-===== [13] ajv (JavaScript): only a ==========================================
+----- [13] ajv (JavaScript): only a ------------------------------------------
 
 $ ajv-validate --schema schema.json --instance instance-only-a.json
 VALID
 
-===== [14] neither a nor b ===================================================
+----- [14] neither a nor b ---------------------------------------------------
 
 $ cat instance-empty.json
 {}
 
-===== [15] jsonschema (Python): neither a nor b ==============================
+----- [15] jsonschema (Python): neither a nor b ------------------------------
 
 $ jsonschema-validate --schema schema.json --instance instance-empty.json
 VALID
 
-===== [16] ajv (JavaScript): neither a nor b =================================
+----- [16] ajv (JavaScript): neither a nor b ---------------------------------
 
 $ ajv-validate --schema schema.json --instance instance-empty.json
 VALID

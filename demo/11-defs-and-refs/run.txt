@@ -1,3 +1,8 @@
+##############################################################################
+#
+#   json-schema-dev  ·  demo 11: defs and refs
+#
+##############################################################################
 
 ===== [1] a definition written once, enforced everywhere it is referenced =====
 
@@ -11,7 +16,7 @@ The two instances differ in one value. The error message names the site
 that failed, not the definition: the reference is transparent, as if the
 definition had been written inline at each use.
 
-===== [2] the schema (Hex defined once, used twice) ==========================
+----- [2] the schema (Hex defined once, used twice) --------------------------
 
 $ cat schema-reuse.json
 {
@@ -24,32 +29,32 @@ $ cat schema-reuse.json
   }
 }
 
-===== [3] both values well-formed ============================================
+----- [3] both values well-formed --------------------------------------------
 
 $ cat instance-both.json
 {"checksum": "cafe", "previous": "beef"}
 
-===== [4] jsonschema (Python): both well-formed ==============================
+----- [4] jsonschema (Python): both well-formed ------------------------------
 
 $ jsonschema-validate --schema schema-reuse.json --instance instance-both.json
 VALID
 
-===== [5] ajv (JavaScript): both well-formed =================================
+----- [5] ajv (JavaScript): both well-formed ---------------------------------
 
 $ ajv-validate --schema schema-reuse.json --instance instance-both.json
 VALID
 
-===== [6] one value malformed ================================================
+----- [6] one value malformed ------------------------------------------------
 
 $ cat instance-bad-previous.json
 {"checksum": "cafe", "previous": "BEEF"}
 
-===== [7] jsonschema (Python): one malformed =================================
+----- [7] jsonschema (Python): one malformed ---------------------------------
 
 $ jsonschema-validate --schema schema-reuse.json --instance instance-bad-previous.json
 INVALID: /previous: 'BEEF' does not match '^[0-9a-f]+$'
 
-===== [8] ajv (JavaScript): one malformed ====================================
+----- [8] ajv (JavaScript): one malformed ------------------------------------
 
 $ ajv-validate --schema schema-reuse.json --instance instance-bad-previous.json
 INVALID: /previous: must match pattern "^[0-9a-f]+$"
@@ -67,7 +72,7 @@ Note what intersection implies: a branch can only add constraints. There is
 no way to write "this part, minus that requirement" — relaxing anything
 means composing a different list, not overriding a member of this one.
 
-===== [10] the schema (two definitions, both required) =======================
+----- [10] the schema (two definitions, both required) -----------------------
 
 $ cat schema-allof.json
 {
@@ -81,32 +86,32 @@ $ cat schema-allof.json
   ]
 }
 
-===== [11] both properties present ===========================================
+----- [11] both properties present -------------------------------------------
 
 $ cat instance-both.json
 {"checksum": "cafe", "previous": "beef"}
 
-===== [12] jsonschema (Python): both present =================================
+----- [12] jsonschema (Python): both present ---------------------------------
 
 $ jsonschema-validate --schema schema-allof.json --instance instance-both.json
 VALID
 
-===== [13] ajv (JavaScript): both present ====================================
+----- [13] ajv (JavaScript): both present ------------------------------------
 
 $ ajv-validate --schema schema-allof.json --instance instance-both.json
 VALID
 
-===== [14] one property missing ==============================================
+----- [14] one property missing ----------------------------------------------
 
 $ cat instance-one.json
 {"checksum": "cafe"}
 
-===== [15] jsonschema (Python): one missing ==================================
+----- [15] jsonschema (Python): one missing ----------------------------------
 
 $ jsonschema-validate --schema schema-allof.json --instance instance-one.json
 INVALID: 'previous' is a required property
 
-===== [16] ajv (JavaScript): one missing =====================================
+----- [16] ajv (JavaScript): one missing -------------------------------------
 
 $ ajv-validate --schema schema-allof.json --instance instance-one.json
 INVALID: must have required property 'previous'
@@ -123,7 +128,7 @@ the broken reference. Both exit 2 here — an error, not a verdict — but in a
 larger schema the lazy resolver means a typo'd reference on a rarely-taken
 path can sit unnoticed until the first instance takes that path.
 
-===== [18] the schema (ref names Hexx, def names Hex) ========================
+----- [18] the schema (ref names Hexx, def names Hex) ------------------------
 
 $ cat schema-typo.json
 {
@@ -135,12 +140,12 @@ $ cat schema-typo.json
   }
 }
 
-===== [19] jsonschema (Python): typo'd ref ===================================
+----- [19] jsonschema (Python): typo'd ref -----------------------------------
 
 $ jsonschema-validate --schema schema-typo.json --instance instance-both.json
 jsonschema-validate: error: schema-typo.json contains an unresolvable $ref: PointerToNowhere: '/$defs/Hexx' does not exist within {'$defs': {'Hex': {'type': 'string', 'pattern': '^[0-9a-f]+$'}}, 'properties': {'checksum': {'$ref': '#/$defs/Hexx'}}}
 
-===== [20] ajv (JavaScript): typo'd ref ======================================
+----- [20] ajv (JavaScript): typo'd ref --------------------------------------
 
 $ ajv-validate --schema schema-typo.json --instance instance-both.json
 ajv-validate: error: schema-typo.json is not a valid JSON Schema: can't resolve reference #/$defs/Hexx from id #

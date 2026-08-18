@@ -17,6 +17,23 @@
 #   show "title" cmd args...      a command cell: the command as you would
 #                                 type it, then its output
 #
+# and two structural constructs, which are not cells:
+#
+#   title "text"                  the notebook's title, printed once at the
+#                                 top so run.txt says what it is; the first
+#                                 line of every run.sh
+#
+#   section "title"               a header dividing the demo into groups of
+#                                 cells that go together; numbered on its
+#                                 own, printed in a distinct style, and not
+#                                 counted in cell numbering
+#
+# The title is printed only on a full run; a selective run is an excerpt
+# and carries no title. A section header is printed lazily -- just before
+# the first selected cell that follows it -- so a full run shows every
+# header in place, and a selective run shows only the headers of sections
+# it touches.
+#
 # Cells are numbered in banner order, and the numbers appear inline in the
 # banners ("===== [5] title ====="), so a demo's run.txt doubles as its cell
 # index. A run.sh invocation may select cells by those numbers; each argument
@@ -69,26 +86,59 @@ cell_in_range() {
     return 1
 }
 
+# Three fills, one per level: sections in '#', prose (doc) cells in '=',
+# command (show) cells in '-', so the banners alone show the structure --
+# grouping, teaching, evidence -- while scrolling.
 BANNER_WIDTH=78
-BANNER_FILL='=========================================================================================='
+DOC_FILL='=========================================================================================='
+SHOW_FILL='------------------------------------------------------------------------------------------'
+SECTION_FILL='##########################################################################################'
 
-banner() {
-    local label="===== [${CELL_INDEX}] $1 "
+title() {
+    (( ${#CELL_RANGES[@]} > 0 )) && return 0
+    printf '%s\n#\n#   %s\n#\n%s\n' \
+        "${SECTION_FILL:0:BANNER_WIDTH}" "$1" "${SECTION_FILL:0:BANNER_WIDTH}"
+}
+
+# A section header waits in SECTION_PENDING until a selected cell prints,
+# so that selective runs show only the sections they touch.
+SECTION_INDEX=0
+SECTION_PENDING=''
+
+section() {
+    SECTION_INDEX=$(( SECTION_INDEX + 1 ))
+    SECTION_PENDING="$1"
+}
+
+flush_section() {
+    [[ -z $SECTION_PENDING ]] && return 0
+    local label="##### ${SECTION_INDEX}. ${SECTION_PENDING} "
     local pad=$(( BANNER_WIDTH - ${#label} ))
     (( pad < 5 )) && pad=5
-    printf '\n%s%s\n\n' "$label" "${BANNER_FILL:0:pad}"
+    printf '\n\n%s\n%s%s\n%s\n' "${SECTION_FILL:0:BANNER_WIDTH}" \
+        "$label" "${SECTION_FILL:0:pad}" "${SECTION_FILL:0:BANNER_WIDTH}"
+    SECTION_PENDING=''
+}
+
+banner() {
+    flush_section
+    local fill="$1" title="$2"
+    local label="${fill:0:5} [${CELL_INDEX}] ${title} "
+    local pad=$(( BANNER_WIDTH - ${#label} ))
+    (( pad < 5 )) && pad=5
+    printf '\n%s%s\n\n' "$label" "${fill:0:pad}"
 }
 
 doc() {
     cell_in_range || return 0
-    banner "$1"
+    banner "$DOC_FILL" "$1"
     cat
 }
 
 show() {
     cell_in_range || return 0
     local title="$1"; shift
-    banner "$title"
+    banner "$SHOW_FILL" "$title"
     printf '$ %s\n' "$*"
     # stderr is folded into stdout so the golden file records everything the
     # command emitted, not just the part that happened to go to stdout. A

@@ -2,6 +2,8 @@
 
 source "${JSON_SCHEMA_DEV_CELLS_DIR}/cells.sh"
 
+title "json-schema-dev  ·  demo 13: unevaluated properties"
+
 doc "unevaluatedProperties closes over allOf" << 'END_DOC'
 An object schema is "closed" when it rejects properties it did not declare.
 The obvious way to close one is additionalProperties: false — but that

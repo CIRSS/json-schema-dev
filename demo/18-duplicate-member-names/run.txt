@@ -1,3 +1,8 @@
+##############################################################################
+#
+#   json-schema-dev  ·  demo 18: duplicate member names
+#
+##############################################################################
 
 ===== [1] duplicate member names vanish before any schema can see them =======
 
@@ -24,32 +29,32 @@ unique keys, so a JSON-LD checking pipeline turns this flag on.
 
 The two verdict pairs below differ in exactly one way: the flag.
 
-===== [2] an instance with a duplicate member ================================
+----- [2] an instance with a duplicate member --------------------------------
 
 $ cat instance-duplicate.json
 {"a": 1, "a": 2}
 
-===== [3] the schema (a must equal 2) ========================================
+----- [3] the schema (a must equal 2) ----------------------------------------
 
 $ cat schema-last-wins.json
 { "properties": { "a": { "const": 2 } } }
 
-===== [4] jsonschema (Python): without the flag ==============================
+----- [4] jsonschema (Python): without the flag ------------------------------
 
 $ jsonschema-validate --schema schema-last-wins.json --instance instance-duplicate.json
 VALID
 
-===== [5] ajv (JavaScript): without the flag =================================
+----- [5] ajv (JavaScript): without the flag ---------------------------------
 
 $ ajv-validate --schema schema-last-wins.json --instance instance-duplicate.json
 VALID
 
-===== [6] jsonschema (Python): with the flag =================================
+----- [6] jsonschema (Python): with the flag ---------------------------------
 
 $ jsonschema-validate --schema schema-last-wins.json --instance instance-duplicate.json --reject-duplicate-members
 INVALID: instance contains duplicate member name "a"
 
-===== [7] ajv (JavaScript): with the flag ====================================
+----- [7] ajv (JavaScript): with the flag ------------------------------------
 
 $ ajv-validate --schema schema-last-wins.json --instance instance-duplicate.json --reject-duplicate-members
 INVALID: instance contains duplicate member name "a"
