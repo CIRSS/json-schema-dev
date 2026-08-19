@@ -4,85 +4,15 @@
 #
 ##############################################################################
 
-===== [1] additionalProperties holds a schema, not a flag ====================
+===== [1] additionalProperties: the schema for the extra properties ==========
 
-Demo 01 showed that true and false are schemas. This demo shows where that
-fact is actually used, and why the language bothers to have it.
+"additionalProperties" gives the schema that every extra property of an
+object must satisfy -- extra meaning any property that "properties" does not
+name. The schema below names one string property, "a", and requires every
+other property to be a number. It is checked against two instances identical
+except for the type of "b": the verdict turns on that one difference.
 
-additionalProperties takes a schema and applies it to each property that
-properties and patternProperties did not match. So additionalProperties:
-false says "no extra property can validate," and therefore none may appear;
-additionalProperties: true says "every extra property validates," and all
-may appear. Both read like flag syntax. Neither is: they are ordinary
-schemas sitting in a schema-valued slot, and by demo 01's equivalence, {}
-in that slot would behave exactly as true does.
-
-Draft-04 specified this keyword as taking "a boolean or a schema" — a
-genuine special case in the grammar. Making booleans schemas removed it.
-
-Two comparisons follow. In the first, one instance is checked against three
-schemas that differ only in the value of additionalProperties. In the
-second, one schema is checked against two instances that differ only in the
-type of the extra property.
-
------ [2] the instance -------------------------------------------------------
-
-$ cat instance-number.json
-{
-  "a": "hello",
-  "b": 1
-}
-
------ [3] extras forbidden (additionalProperties false) ----------------------
-
-$ cat schema-false.json
-{
-  "type": "object",
-  "properties": { "a": { "type": "string" } },
-  "additionalProperties": false
-}
-
------ [4] jsonschema (Python): extras forbidden ------------------------------
-
-$ jsonschema-validate --schema schema-false.json --instance instance-number.json
-INVALID: Additional properties are not allowed ('b' was unexpected)
-
------ [5] ajv (JavaScript): extras forbidden ---------------------------------
-
-$ ajv-validate --schema schema-false.json --instance instance-number.json
-INVALID: must NOT have additional properties
-
------ [6] extras allowed (additionalProperties true) -------------------------
-
-$ cat schema-true.json
-{
-  "type": "object",
-  "properties": { "a": { "type": "string" } },
-  "additionalProperties": true
-}
-
------ [7] jsonschema (Python): extras allowed --------------------------------
-
-$ jsonschema-validate --schema schema-true.json --instance instance-number.json
-VALID
-
------ [8] ajv (JavaScript): extras allowed -----------------------------------
-
-$ ajv-validate --schema schema-true.json --instance instance-number.json
-VALID
-
-===== [9] the proof that it is a schema ======================================
-
-A flag has two settings. If the slot really holds a schema, a non-boolean
-one must work there too — and must constrain the extra properties rather
-than merely permitting or forbidding them.
-
-The schema below allows extras but requires them to be numbers. It is then
-checked against two instances identical except for the type of b. The
-verdict turns on that one difference, which is not something a flag could
-express.
-
------ [10] extras must be numbers --------------------------------------------
+----- [2] extras must be numbers ---------------------------------------------
 
 $ cat schema-number.json
 {
@@ -91,7 +21,7 @@ $ cat schema-number.json
   "additionalProperties": { "type": "number" }
 }
 
------ [11] extra b is a number -----------------------------------------------
+----- [3] extra b is a number ------------------------------------------------
 
 $ cat instance-number.json
 {
@@ -99,17 +29,17 @@ $ cat instance-number.json
   "b": 1
 }
 
------ [12] jsonschema (Python): extra b is a number --------------------------
+----- [4] jsonschema (Python): extra b is a number ---------------------------
 
 $ jsonschema-validate --schema schema-number.json --instance instance-number.json
 VALID
 
------ [13] ajv (JavaScript): extra b is a number -----------------------------
+----- [5] ajv (JavaScript): extra b is a number ------------------------------
 
 $ ajv-validate --schema schema-number.json --instance instance-number.json
 VALID
 
------ [14] extra b is a string -----------------------------------------------
+----- [6] extra b is a string ------------------------------------------------
 
 $ cat instance-string.json
 {
@@ -117,12 +47,86 @@ $ cat instance-string.json
   "b": "x"
 }
 
------ [15] jsonschema (Python): extra b is a string --------------------------
+----- [7] jsonschema (Python): extra b is a string ---------------------------
 
 $ jsonschema-validate --schema schema-number.json --instance instance-string.json
 INVALID: /b: 'x' is not of type 'number'
 
------ [16] ajv (JavaScript): extra b is a string -----------------------------
+----- [8] ajv (JavaScript): extra b is a string ------------------------------
 
 $ ajv-validate --schema schema-number.json --instance instance-string.json
 INVALID: /b: must be number
+
+===== [9] false, true, and {} in the same position ===========================
+
+Because the value is a schema, true and false can stand in this position
+too, and they mean what demo 01 showed: false rejects every extra property,
+so any object with one is rejected; true accepts every extra property; and
+{} behaves exactly as true does. Below, one instance with an extra property
+is checked against these three schemas, which differ only in the value of
+"additionalProperties".
+
+----- [10] the instance ------------------------------------------------------
+
+$ cat instance-number.json
+{
+  "a": "hello",
+  "b": 1
+}
+
+----- [11] extras forbidden (additionalProperties false) ---------------------
+
+$ cat schema-false.json
+{
+  "type": "object",
+  "properties": { "a": { "type": "string" } },
+  "additionalProperties": false
+}
+
+----- [12] jsonschema (Python): extras forbidden -----------------------------
+
+$ jsonschema-validate --schema schema-false.json --instance instance-number.json
+INVALID: Additional properties are not allowed ('b' was unexpected)
+
+----- [13] ajv (JavaScript): extras forbidden --------------------------------
+
+$ ajv-validate --schema schema-false.json --instance instance-number.json
+INVALID: must NOT have additional properties
+
+----- [14] extras allowed (additionalProperties true) ------------------------
+
+$ cat schema-true.json
+{
+  "type": "object",
+  "properties": { "a": { "type": "string" } },
+  "additionalProperties": true
+}
+
+----- [15] jsonschema (Python): extras allowed -------------------------------
+
+$ jsonschema-validate --schema schema-true.json --instance instance-number.json
+VALID
+
+----- [16] ajv (JavaScript): extras allowed ----------------------------------
+
+$ ajv-validate --schema schema-true.json --instance instance-number.json
+VALID
+
+----- [17] extras allowed (additionalProperties {}) --------------------------
+
+$ cat schema-empty.json
+{
+  "type": "object",
+  "properties": { "a": { "type": "string" } },
+  "additionalProperties": {}
+}
+
+----- [18] jsonschema (Python): extras allowed, {} ---------------------------
+
+$ jsonschema-validate --schema schema-empty.json --instance instance-number.json
+VALID
+
+----- [19] ajv (JavaScript): extras allowed, {} ------------------------------
+
+$ ajv-validate --schema schema-empty.json --instance instance-number.json
+VALID

@@ -4,22 +4,24 @@ source "${JSON_SCHEMA_DEV_CELLS_DIR}/cells.sh"
 
 title "json-schema-dev  ·  demo 08: anyOf and not"
 
-doc "combining predicates: and, or, not" << 'END_DOC'
-Every schema so far has been a single object whose keywords all apply
-at once: a schema object is an "and" of its members. JSON Schema also
-has keywords whose values are themselves schemas and whose job is to
-combine verdicts. "allOf" is "and" made explicit, over a list of
-schemas; "anyOf" is "or", satisfied if at least one schema in its
-list is; "oneOf" is "exactly one"; "not" is negation, satisfied only
-if the schema inside is not; and "if"/"then"/"else" chooses between
-schemas by a test. Together they are the boolean applicators, and
-they let a schema be assembled from small predicates rather than
-written as one large one.
+doc "combining schemas: and, or, not" << 'END_DOC'
+An instance satisfies a schema object only if it satisfies every
+keyword in it: a schema object is an "and" of its members. JSON
+Schema also has keywords whose values are schemas and whose only job
+is to combine the verdicts of those schemas. "allOf" holds a list of
+schemas and is satisfied when every one of them is; "anyOf" holds a
+list and is satisfied when at least one is; "oneOf" holds a list and
+is satisfied when exactly one is; "not" holds one schema and is
+satisfied when that schema is not; "if", "then", and "else" hold one
+schema each, and whether "then" or "else" is applied depends on
+whether "if" is satisfied. Together these give a schema author and,
+or, exactly-one, negation, and choice.
 
-This demo shows "anyOf" and "not", using "pattern" as the small
-predicate because a pattern is self-contained: what it accepts can
-be read off the string. "oneOf", "if"/"then"/"else", and "allOf"
-each get their own demo later.
+This demo shows "anyOf" and "not". The schemas they combine here are
+each a single "pattern", chosen because what a pattern accepts can
+be checked by eye against the string. "oneOf" (demo 10), "if",
+"then", and "else" (demo 11), and "allOf" (demo 12) each get their
+own demo.
 END_DOC
 
 section "anyOf"
@@ -47,20 +49,20 @@ plain patterns, one per alternative:
                {"pattern": "^latest$"} ]
 
 An instance satisfies "anyOf" if it satisfies at least one schema in
-the list. The two forms accept exactly the same strings and
-reject exactly the same strings, and the verdicts below agree case
-for case. What "anyOf" changes is the reading: each
-alternative is a short pattern on its own line, and adding a third
-alternative is adding a third entry rather than editing the inside
-of a longer expression. (Each entry is a complete schema, so it can
+the list. The two forms accept exactly the same strings and reject
+exactly the same strings, and the verdicts below agree case for
+case. What "anyOf" changes is how the requirement reads: each
+alternative is a short pattern on its own line, and a third
+alternative is a third entry in the list rather than an edit inside
+a longer expression. (Each entry is a complete schema, so it can
 also be given a name and referred to from wherever it is needed;
 demo 12 shows how.)
 END_DOC
 
 doc "the examples" << 'END_DOC'
-Both schemas are checked against three strings: a three-part version,
-the word "latest", and a two-part version that neither alternative
-admits. Both validators, every case. On the rejection the verdicts
+Both schemas are checked, by both validators, against three strings:
+a three-part version, the word "latest", and a two-part version that
+neither alternative accepts. On the rejection the verdicts
 agree but the reports do not: Python says only that no alternative
 matched, while Ajv reports each alternative's failure separately
 before the summary -- so a reader of the Ajv output can see which
@@ -88,20 +90,25 @@ show "ajv (JavaScript): anyOf, two-part"          ajv-validate        --schema s
 section "not"
 
 doc "and not this" << 'END_DOC'
-"not" takes one schema and inverts its verdict. Placed beside a
-"pattern", it says: matches this, and not that. A regular expression
-can express "not that" only with lookaround, which demo 07 used for
-the trailing newline and which not every engine supports; "not" says
-it with a plain keyword and a plain pattern, in every validator.
+"not" holds one schema and inverts its verdict: the instance is
+accepted when the schema inside rejects it, and rejected when the
+schema inside accepts it.
 
-The example: a four-digit hexadecimal identifier that must not be
-all zeros. The pattern admits the hexadecimal strings; "not" removes
-the one string among them that is reserved.
+The schema below has two members, a "pattern" and a "not", and an
+instance must satisfy both. The "pattern" is ^[0-9a-f]{4}$: four
+lowercase hexadecimal digits. The "not" holds {"pattern": "^0{4}$"},
+so it rejects the one string 0000 and accepts everything else.
+Together: four hexadecimal digits, and not 0000.
+
+A single regular expression can express "and not" only with
+lookahead, which demo 07 used for the trailing newline and which not
+every engine supports; "not" needs only a plain keyword and a plain
+pattern, and every validator has both.
 END_DOC
 
 doc "the examples" << 'END_DOC'
-One schema, checked against a hexadecimal string and against "0000".
-Both validators.
+One schema, checked by both validators against a hexadecimal string
+and against "0000".
 END_DOC
 
 show "the schema"                                 cat schema-hex-not-zero.json
@@ -113,12 +120,12 @@ show "jsonschema (Python): zeros"                 jsonschema-validate --schema s
 show "ajv (JavaScript): zeros"                    ajv-validate        --schema schema-hex-not-zero.json --instance instance-zeros.json
 
 doc "the rule: several plain patterns over one clever one" << 'END_DOC'
-Where a constraint on a string decomposes into alternatives or
-exclusions, write each part as its own plain pattern and let "anyOf"
-and "not" do the combining. Each part stays readable and separately
-testable, and the combining is done by keywords every validator
-implements identically rather than by regular-expression features
-they may not share.
+Where a requirement on a string is a choice between alternatives, or
+a match with an exception, write each part as its own plain pattern
+and let "anyOf" and "not" do the combining. Each part stays readable
+and separately testable, and the combining is done by keywords whose
+meaning is the same in every validator rather than by
+regular-expression features the validators' engines may not share.
 END_DOC
 
 exit 0
