@@ -4,16 +4,25 @@
 #
 ##############################################################################
 
-===== [1] a discriminator property selects which constraints apply ===========
+===== [1] a tag property selects which constraints apply =====================
 
-Records that come in variants usually carry a tag naming which variant this
-is — here, kind — with the rest of the record's shape depending on it.
-if/then/else expresses that: if is a schema, and whether the instance
-matches it decides whether then or else applies. The schema below requires
-a radius of circles and a side of everything else.
+A record that comes in several forms often carries one property saying
+which form it is -- a tag -- and the rest of the record's shape depends on
+it. In these examples the tag is "kind", and a record of kind "circle"
+must carry a "radius" while every other kind must carry a "side".
 
-The three instances vary one thing at a time: a circle with its radius, a
-circle carrying a side instead, and a square with its side.
+"if", "then", and "else" say this directly. "if" holds a schema; when the
+instance satisfies it, the "then" schema is enforced, and otherwise the
+"else" schema is. Nothing ties "if" to tags: it holds any schema, so any
+condition a schema can state -- a property's value, a string's pattern, an
+array's length -- can select which further constraints apply. The schema
+below says: if the instance has a "kind" member whose value is "circle",
+then "radius" is required; otherwise "side" is. The "if" schema states its
+condition with ordinary keywords from earlier demos: "properties", "const",
+and "required".
+
+The three instances vary one thing at a time: a circle with a radius, a
+circle with a side instead, and a square with a side.
 
 ----- [2] the schema (circles need radius, others side) ----------------------
 
@@ -70,21 +79,28 @@ VALID
 $ ajv-validate --schema schema-union.json --instance instance-square.json
 VALID
 
-===== [12] the if schema must require its own discriminator ==================
+===== [12] the if schema must require its own tag ============================
 
-The trap in this construct comes from demo 02: properties does not make a
-property required, and that holds inside an if schema too. The two schemas
-below differ in exactly one place — whether the if schema also carries
-required: ["kind"] — and the instance is the empty object, which carries no
-discriminator at all.
+Demo 02 showed that "properties" does not make a property required, and
+that holds inside an "if" schema too. The two schemas below differ in one
+place only: whether the "if" schema also carries "required": ["kind"].
+Neither has an "else", so when the "if" fails nothing more is required. The
+instance is the empty object, which has no "kind" at all.
 
-Without the required, the empty object satisfies the if vacuously (kind is
-absent, so its const is never tested), then is applied, and the instance is
-rejected for lacking a radius it was never obliged to have. With it, the if
-fails, no branch applies, and the empty object passes — deciding nothing
-about records that do not claim to be circles.
+Without the "required", the empty object satisfies the "if" -- "kind" is
+absent, so its "const" is never tested -- the "then" schema is applied, and
+the object is rejected for lacking a "radius" it was never obliged to have.
+With the "required", the "if" fails, the "then" schema is not applied, and
+the empty object passes: the schema says nothing about records that do not
+claim to be circles.
 
------ [13] if without required kind ------------------------------------------
+The loose form has one deliberate use: when untagged records should fall
+under "then" -- that is, when the tagged case is the default. Nothing in
+the schema distinguishes that intent from the mistake, so the form calls
+for caution rather than prohibition: write it only on purpose, and say so
+in the schema.
+
+----- [13] if without required kind  ---- ⚠ USE WITH CAUTION ⚠ -----------
 
 $ cat schema-loose-if.json
 {
@@ -125,3 +141,208 @@ VALID
 
 $ ajv-validate --schema schema-strict-if.json --instance instance-empty.json
 VALID
+
+===== [20] a condition that is not a tag =====================================
+
+The "if" schema can be anything. Below, the instance is a bare value rather
+than an object, and the "if" tests its kind: if the instance is a string, it
+may be at most five characters long ("maxLength" is the longest string
+allowed); otherwise it must be a number no greater than five ("maximum" is
+the largest number allowed). Four instances: a short string, a long string,
+a small number, a large number.
+
+----- [21] the schema (short strings, or small numbers) ----------------------
+
+$ cat schema-by-kind.json
+{
+  "if":   { "type": "string" },
+  "then": { "maxLength": 5 },
+  "else": { "type": "number", "maximum": 5 }
+}
+
+----- [22] a short string ----------------------------------------------------
+
+$ cat instance-short-string.json
+"abc"
+
+----- [23] jsonschema (Python): short string ---------------------------------
+
+$ jsonschema-validate --schema schema-by-kind.json --instance instance-short-string.json
+VALID
+
+----- [24] ajv (JavaScript): short string ------------------------------------
+
+$ ajv-validate --schema schema-by-kind.json --instance instance-short-string.json
+VALID
+
+----- [25] a long string -----------------------------------------------------
+
+$ cat instance-long-string.json
+"abcdefgh"
+
+----- [26] jsonschema (Python): long string ----------------------------------
+
+$ jsonschema-validate --schema schema-by-kind.json --instance instance-long-string.json
+INVALID: 'abcdefgh' is too long
+
+----- [27] ajv (JavaScript): long string -------------------------------------
+
+$ ajv-validate --schema schema-by-kind.json --instance instance-long-string.json
+INVALID: must NOT have more than 5 characters
+INVALID: must match "then" schema
+
+----- [28] a small number ----------------------------------------------------
+
+$ cat instance-small-number.json
+3
+
+----- [29] jsonschema (Python): small number ---------------------------------
+
+$ jsonschema-validate --schema schema-by-kind.json --instance instance-small-number.json
+VALID
+
+----- [30] ajv (JavaScript): small number ------------------------------------
+
+$ ajv-validate --schema schema-by-kind.json --instance instance-small-number.json
+VALID
+
+----- [31] a large number ----------------------------------------------------
+
+$ cat instance-large-number.json
+30
+
+----- [32] jsonschema (Python): large number ---------------------------------
+
+$ jsonschema-validate --schema schema-by-kind.json --instance instance-large-number.json
+INVALID: 30 is greater than the maximum of 5
+
+----- [33] ajv (JavaScript): large number ------------------------------------
+
+$ ajv-validate --schema schema-by-kind.json --instance instance-large-number.json
+INVALID: must be <= 5
+INVALID: must match "else" schema
+
+===== [34] the order of if, then, and else does not matter ===================
+
+Written "if", "then", "else", the three keywords look like a program: a
+test that runs first, then a branch taken in order. They are not. They are
+three members of a schema object, and the members of a JSON object are
+unordered; a validator picks each one out by its name. The schema below is
+the first schema of this demo with its members written in the opposite
+order, and its verdict on the circle-with-a-side instance is the same.
+
+----- [35] the same schema, members reversed ---------------------------------
+
+$ cat schema-union-scrambled.json
+{
+  "else": { "required": ["side"] },
+  "then": { "required": ["radius"] },
+  "if":   { "properties": { "kind": { "const": "circle" } }, "required": ["kind"] }
+}
+
+----- [36] jsonschema (Python): reversed, circle with side -------------------
+
+$ jsonschema-validate --schema schema-union-scrambled.json --instance instance-circle-side.json
+INVALID: 'radius' is a required property
+
+----- [37] ajv (JavaScript): reversed, circle with side ----------------------
+
+$ ajv-validate --schema schema-union-scrambled.json --instance instance-circle-side.json
+INVALID: must have required property 'radius'
+INVALID: must match "then" schema
+
+===== [38] then and else do nothing without if ===============================
+
+Because the keywords are picked out by name, "then" and "else" act only
+when an "if" is present in the same schema object to select between them.
+The first schema below has a "then" and no "if". Nothing selects the
+"then", so it is ignored, and an empty object -- with no "radius" --
+passes both validators. The second schema has a "then" and an "else" and
+no "if", and neither fires: the empty object violates what the "then"
+states and what the "else" states, and still passes -- one verdict showing
+both keywords inert. Demo 01 showed that a misspelled keyword is silently
+ignored; this is one step worse: misspell or delete the "if" and the
+correctly spelled "then" and "else" beside it go silent too, and the
+whole conditional disappears without an error.
+
+----- [39] a then with no if  ---- ☠ DO NOT EMULATE ☠ --------------------
+
+$ cat schema-then-only.json
+{"then": {"required": ["radius"]}}
+
+----- [40] jsonschema (Python): then with no if ------------------------------
+
+$ jsonschema-validate --schema schema-then-only.json --instance instance-empty.json
+VALID
+
+----- [41] ajv (JavaScript): then with no if ---------------------------------
+
+$ ajv-validate --schema schema-then-only.json --instance instance-empty.json
+VALID
+
+----- [42] a then and an else with no if  ---- ☠ DO NOT EMULATE ☠ --------
+
+$ cat schema-then-else-no-if.json
+{"then": {"required": ["radius"]}, "else": {"required": ["side"]}}
+
+----- [43] jsonschema (Python): then and else, no if -------------------------
+
+$ jsonschema-validate --schema schema-then-else-no-if.json --instance instance-empty.json
+VALID
+
+----- [44] ajv (JavaScript): then and else, no if ----------------------------
+
+$ ajv-validate --schema schema-then-else-no-if.json --instance instance-empty.json
+VALID
+
+===== [45] the trio is sugar, and what the sugar costs =======================
+
+"if", "then", and "else" add no expressive power. The same conditional can
+be written with the combinators of demo 08: an "anyOf" of two "allOf"
+branches, one holding the condition and the "then" schema, the other
+holding the condition under a "not" and the "else" schema. The schema
+below is the first schema of this demo rewritten that way, and its
+verdicts on the square and on the circle-with-a-side match the first
+schema's.
+
+In this form none of the traps above exist: no member is ever inert, and
+the condition sits inside each branch instead of acting on siblings at a
+distance. What the rewrite costs is on view in the rejection: Ajv reports
+every branch's failure before the summary, where the "then" form named
+the failed branch in one line. That trade -- shorter schema and clearer
+errors, bought with the language's only sibling-coupled keywords -- is
+the whole case for and against "if", "then", and "else".
+
+----- [46] the conditional written with anyOf, allOf, and not ----------------
+
+$ cat schema-union-desugared.json
+{
+  "anyOf": [
+    { "allOf": [ { "properties": { "kind": { "const": "circle" } }, "required": ["kind"] },
+                 { "required": ["radius"] } ] },
+    { "allOf": [ { "not": { "properties": { "kind": { "const": "circle" } }, "required": ["kind"] } },
+                 { "required": ["side"] } ] }
+  ]
+}
+
+----- [47] jsonschema (Python): desugared, square ----------------------------
+
+$ jsonschema-validate --schema schema-union-desugared.json --instance instance-square.json
+VALID
+
+----- [48] ajv (JavaScript): desugared, square -------------------------------
+
+$ ajv-validate --schema schema-union-desugared.json --instance instance-square.json
+VALID
+
+----- [49] jsonschema (Python): desugared, circle with side ------------------
+
+$ jsonschema-validate --schema schema-union-desugared.json --instance instance-circle-side.json
+INVALID: {'kind': 'circle', 'side': 4} is not valid under any of the given schemas
+
+----- [50] ajv (JavaScript): desugared, circle with side ---------------------
+
+$ ajv-validate --schema schema-union-desugared.json --instance instance-circle-side.json
+INVALID: must have required property 'radius'
+INVALID: must NOT be valid
+INVALID: must match a schema in anyOf

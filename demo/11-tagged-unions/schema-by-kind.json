@@ -1,0 +1,5 @@
+{
+  "if":   { "type": "string" },
+  "then": { "maxLength": 5 },
+  "else": { "type": "number", "maximum": 5 }
+}
