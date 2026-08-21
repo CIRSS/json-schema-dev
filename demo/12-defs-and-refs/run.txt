@@ -6,18 +6,31 @@
 
 ===== [1] a definition written once, enforced everywhere it is referenced =====
 
-"$defs" holds named schemas; "$ref" uses one where a schema is needed.
-They play the part that type definitions play in a programming language.
-The value of a "$ref" is a path into the schema document: # is the
-document itself, and /$defs/Hex walks from there to the definition. The
-schema below defines Hex once -- a lowercase hexadecimal string, anchored
-with ^ and $ and ending with the $(?!\n) guard against a trailing
-newline, both from demo 07 -- and references it from two properties.
-Lowercase only is deliberate: a parser reading hex as a number accepts
-either case, but a checksum is compared as a string, where DEADC0DE and
-deadc0de are different -- so the definition pins one canonical case, as
-git does for its object ids.
-Editing the definition changes what both properties enforce.
+"$ref" applies a schema that is written somewhere else. It stands in
+any position that takes a schema: {"$ref": [schema identifier]} is a
+complete schema whose meaning is the schema it points at, enforced as
+if written in its place.
+
+"$defs" is the safest place to put schemas that should be defined but
+not applied where they are written. A "$defs" entry is applied to no
+instance unless referenced somewhere else, yet is required to be a
+valid schema. The key an entry is filed under -- Hex below -- has no
+meaning of its own; it simply becomes part of the path a "$ref" walks.
+
+Together the two play the part that type definitions play in a
+programming language. The value of each "$ref" here is a path into the
+schema document: # is the document itself, and /$defs/Hex walks from
+there to the definition. (A "$ref" can also name a schema in other
+ways; demo 13 shows them.)
+
+The schema below defines Hex once -- a lowercase hexadecimal string,
+anchored with ^ and $ and ending with the $(?!\n) guard against a
+trailing newline, both from demo 07 -- and references it from two
+properties. Lowercase only is deliberate: a parser reading hex as a
+number accepts either case, but a checksum is compared as a string,
+where DEADC0DE and deadc0de are different -- so the definition pins one
+canonical case, as git does for its object ids. Editing the definition
+changes what both properties enforce.
 
 The two instances differ in one value. The error message names the
 property that failed, not the definition: the reference reads as if the
@@ -129,8 +142,9 @@ INVALID: must have required property 'previous'
 ===== [17] a reference that resolves to nothing ==============================
 
 In the schema below, the "$ref" names $defs/Hexx while the definition
-sits at $defs/Hex -- a one-character typo. The two validators notice at different
-moments. Ajv resolves every reference while compiling the schema, so it
+sits at $defs/Hex -- a one-character typo. The two validators notice at
+different moments. Ajv resolves every reference while compiling the
+schema, so it
 refuses the schema outright -- an error, not a verdict -- whatever the
 instance holds. Python's jsonschema resolves a reference only when
 validation reaches it: handed an instance with a "checksum", it reports

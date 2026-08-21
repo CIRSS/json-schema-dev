@@ -5,75 +5,125 @@ source "${JSON_SCHEMA_DEV_CELLS_DIR}/cells.sh"
 title "json-schema-dev  ·  demo 13: identifiers and refs"
 
 doc "what \$id is for" << 'END_DOC'
-$id declares the identity of a schema — a URI that names it. It is an
-identifier, not a location: nothing is ever fetched from it, and it may
-point at a host that does not exist.
+"$id" declares the identity of a schema -- a URI that names it.
 
-Its only job is to be the base URI that $ref values resolve against. So a
-schema whose $refs are all fragment-only, like #/$defs/named, never
-consults its $id at all, and can carry one, or not, with no difference in
-behaviour. The first two schemas below make that concrete.
+An "$id" on the outermost schema object of a document names the
+document's schema as a whole. It is how other documents refer to this
+one (demo 16), and it is what a #-less "$ref" in the same document is
+completed against. An "$id" deeper inside -- on a subschema under
+"$defs" -- names just that one subschema.
 
-Every instance in this demo is the same object, so that only the schema's
-identifiers vary.
+Only one thing ever consults the "$id": a "$ref" that does not start
+with #. A "$ref" that starts with # looks inside the current document
+(demo 12's #/$defs/Hex) and ignores the "$id" entirely -- so a schema whose
+"$ref"s all start with # can carry an "$id", or not, with no
+difference in behavior.
+
+Two instances serve the whole demo -- "a" as a number and "a" as a
+string -- so that only the schemas vary.
 END_DOC
 
-show "the instance"  cat instance.json
+show "a number for a"  cat instance-number.json
+show "a string for a"  cat instance-string.json
 
-doc "inert: an \$id that nothing resolves against" << 'END_DOC'
-Two schemas, identical but for the presence of an $id — and that $id names
-a host that could not be reached even if something tried. Same verdict.
+doc "three ways to reference a subschema in the same document" << 'END_DOC'
+The three schemas that follow hold the same definition -- "a" must be
+a number -- as a subschema under "$defs", and differ only in how the
+"$ref" reaches it. Each is checked by both validators against both
+instances: the number is accepted, the string rejected.
 END_DOC
 
-show "no \$id at all"                          cat schema-no-id.json
-show "jsonschema (Python): no \$id"            jsonschema-validate --schema schema-no-id.json --instance instance.json
-show "ajv (JavaScript): no \$id"               ajv-validate        --schema schema-no-id.json --instance instance.json
-
-show "an \$id at an unreachable URI"           cat schema-unreachable-id.json
-show "jsonschema (Python): unreachable \$id"   jsonschema-validate --schema schema-unreachable-id.json --instance instance.json
-show "ajv (JavaScript): unreachable \$id"      ajv-validate        --schema schema-unreachable-id.json --instance instance.json
-
-doc "load-bearing: naming a subschema so \$ref can address it" << 'END_DOC'
-An $id inside $defs does something different: it declares that subschema to
-be a schema resource in its own right, with its own identity, which $ref
-can then target by URI instead of by JSON Pointer.
-
-$anchor does the same job more cheaply. It attaches a plain-name fragment
-to a subschema without making it a separate resource, reached as #named.
-
-Both schemas below constrain a to be a number, so the string instance is
-rejected — which is how you can tell the reference resolved rather than
-being quietly skipped. A $ref that went nowhere would not produce this.
+doc "by local path" << 'END_DOC'
+The "$ref" walks to the definition by its position: #/$defs/named,
+demo 12's way. The path after the # is JSON Pointer, a small standard
+of its own (RFC 6901) for naming a location in any JSON document. The
+error messages below use the same notation: the /a in
+INVALID: /a: 'hello' is not of type 'number' is a JSON Pointer naming
+the failing member of the instance.
 END_DOC
 
-show "\$id on the subschema, \$ref by URI"      cat schema-subschema-id.json
-show "jsonschema (Python): \$ref by URI"        jsonschema-validate --schema schema-subschema-id.json --instance instance.json
-show "ajv (JavaScript): \$ref by URI"           ajv-validate        --schema schema-subschema-id.json --instance instance.json
+show "referencing by local path"               cat schema-local-path.json
+show "jsonschema (Python): by local path, number"   jsonschema-validate --schema schema-local-path.json --instance instance-number.json
+show "ajv (JavaScript): by local path, number"      ajv-validate        --schema schema-local-path.json --instance instance-number.json
+show "jsonschema (Python): by local path, string"   jsonschema-validate --schema schema-local-path.json --instance instance-string.json
+show "ajv (JavaScript): by local path, string"      ajv-validate        --schema schema-local-path.json --instance instance-string.json
 
-show "\$anchor, \$ref by plain name"            cat schema-anchor.json
-show "jsonschema (Python): \$ref by anchor"     jsonschema-validate --schema schema-anchor.json --instance instance.json
-show "ajv (JavaScript): \$ref by anchor"        ajv-validate        --schema schema-anchor.json --instance instance.json
-
-doc "the footgun: a relative \$ref against an \$id" << 'END_DOC'
-Here is why $id is worth understanding even when you are not composing
-across documents. The schema below declares an $id and then writes $ref as
-the bare word "named", intending the $def of that name.
-
-It is not a fragment, so it is not looked up inside the document. It is a
-relative URI reference, resolved against the $id — yielding
-https://example.org/schemas/named, a document neither validator has and
-neither will go looking for. The $def sitting right there is never
-consulted.
-
-Both report it as an error rather than a verdict, and exit 2. Note that the
-two disagree about when they notice: Ajv resolves references while
-compiling the schema and calls it an invalid schema, whereas jsonschema
-resolves lazily during validation, so the failure arrives later and is
-described differently. Same conclusion, different stage.
+doc "by local anchor" << 'END_DOC'
+The keyword "$anchor", written as a member of the subschema itself
+with a plain name as its value, makes that subschema reachable as
+#named -- a # form, but a name rather than a path. It is the
+"$anchor" value that #named reaches, not the "$defs" key: the two
+match here, as they usually do in practice, but only the anchor is a
+name a "$ref" can use.
 END_DOC
 
-show "a relative \$ref"                        cat schema-relative-ref.json
-show "jsonschema (Python): relative \$ref"     jsonschema-validate --schema schema-relative-ref.json --instance instance.json
-show "ajv (JavaScript): relative \$ref"        ajv-validate        --schema schema-relative-ref.json --instance instance.json
+show "referencing by local anchor"             cat schema-anchor.json
+show "jsonschema (Python): by local anchor, number"  jsonschema-validate --schema schema-anchor.json --instance instance-number.json
+show "ajv (JavaScript): by local anchor, number"     ajv-validate        --schema schema-anchor.json --instance instance-number.json
+show "jsonschema (Python): by local anchor, string"  jsonschema-validate --schema schema-anchor.json --instance instance-string.json
+show "ajv (JavaScript): by local anchor, string"     ajv-validate        --schema schema-anchor.json --instance instance-string.json
+
+doc "by full URI" << 'END_DOC'
+The subschema carries an "$id" of its own, and the "$ref" names it by
+that full URI. The URI looks like something to be fetched. It is not:
+the validator matches it, as a string, against the "$id"s of the
+schemas it already holds. Nothing goes over the network.
+END_DOC
+
+show "referencing by full URI"                 cat schema-subschema-id.json
+show "jsonschema (Python): by full URI, number"     jsonschema-validate --schema schema-subschema-id.json --instance instance-number.json
+show "ajv (JavaScript): by full URI, number"        ajv-validate        --schema schema-subschema-id.json --instance instance-number.json
+show "jsonschema (Python): by full URI, string"     jsonschema-validate --schema schema-subschema-id.json --instance instance-string.json
+show "ajv (JavaScript): by full URI, string"        ajv-validate        --schema schema-subschema-id.json --instance instance-string.json
+doc "the trap: a relative \$ref against an \$id" << 'END_DOC'
+There is one more form a "$ref" can take: a relative URI -- neither a
+# form nor a full URI, but a shorthand, completed against the "$id"
+the way a relative link on a web page is completed against the page's
+address. In a document with top-level schema "$id"
+https://example.org/schemas/root, a "$ref" of "sibling" means
+https://example.org/schemas/sibling. Between documents that share a
+base, the shorthand saves repeating it.
+
+The trap is that this shorthand also captures honest mistakes. The
+schema below writes "$ref": "named", intending the "$defs" entry of
+that name. But without the #, named is not looked up inside the
+document at all: it is completed to
+https://example.org/schemas/named, a document neither validator has
+and neither will go looking for. The definition sitting right there
+is never consulted.
+
+By now the word named has been reached three ways: #/$defs/named (a
+path), #named (an anchor), and bare named (another document). The word is
+the same; only the marks around it decide what it means -- and with an
+"$id" declared, forgetting the marks silently changes which one you
+wrote.
+
+Both validators report an error rather than a verdict, and exit 2, at
+the moments demo 12 established: Ajv while compiling the schema,
+jsonschema when validation reaches the reference.
+END_DOC
+
+show "referencing by relative URI"             cat schema-relative-ref.json
+show "jsonschema (Python): by relative URI"    jsonschema-validate --schema schema-relative-ref.json --instance instance-string.json
+show "ajv (JavaScript): by relative URI"       ajv-validate        --schema schema-relative-ref.json --instance instance-string.json
+
+doc "the rules" << 'END_DOC'
+1. A "$ref" that starts with # looks inside the current document: by
+   path (#/$defs/Name) or by anchor (#name).
+
+2. A "$ref" that does not start with # is resolved by "$id". Written
+   in full, it is looked up among the schemas the validator already
+   holds -- this document (its outermost "$id"), a subschema with its
+   own "$id", or another file it was handed (demo 16). Written as a
+   relative URI, it is first completed against the current document's
+   "$id", then looked up the same way. Nothing is ever fetched.
+
+3. "$id" exists to give schemas the names rule 2 uses. Until a "$ref"
+   without # is in play, an "$id" changes nothing.
+
+4. The trap is a "$ref" meant for rule 1 that falls under rule 2: with
+   an "$id" declared, leaving the # off turns an inside-the-document
+   path into the name of another document.
+END_DOC
 
 exit 0
