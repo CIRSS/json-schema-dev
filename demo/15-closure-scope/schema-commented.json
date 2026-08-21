@@ -1,0 +1,18 @@
+{
+  "$defs": {
+    "record": {
+      "properties": {
+        "details": {
+          "type": "object",
+          "properties": { "x": { "type": "number" } },
+          "$comment": "Catch misspelled names of members of the inner object: only 'x' belongs here.",
+          "additionalProperties": false
+        }
+      }
+    }
+  },
+  "type": "object",
+  "$ref": "#/$defs/record",
+  "$comment": "A record has one member at the top level, named 'details'; others are mistakes.",
+  "unevaluatedProperties": false
+}

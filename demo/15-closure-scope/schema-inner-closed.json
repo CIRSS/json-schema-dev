@@ -1,9 +1,10 @@
 {
   "type": "object",
   "properties": {
-    "inner": {
+    "details": {
       "type": "object",
-      "properties": { "x": { "type": "number" } }
+      "properties": { "x": { "type": "number" } },
+      "unevaluatedProperties": false
     }
   },
   "unevaluatedProperties": false

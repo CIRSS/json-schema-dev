@@ -1,0 +1,11 @@
+{
+  "$defs": {
+    "named": {
+      "properties": { "a": { "type": "string" } }
+    }
+  },
+  "type": "object",
+  "$ref": "#/$defs/named",
+  "required": ["a"],
+  "additionalProperties": false
+}
