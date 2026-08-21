@@ -4,63 +4,107 @@ source "${JSON_SCHEMA_DEV_CELLS_DIR}/cells.sh"
 
 title "json-schema-dev  ·  demo 14: unevaluated properties"
 
-doc "unevaluatedProperties closes over allOf" << 'END_DOC'
-An object schema is "closed" when it rejects properties it did not declare.
-The obvious way to close one is additionalProperties: false — but that
-keyword only sees the properties declared in its own schema object. It is
-blind to properties contributed through allOf, so on a composed schema it
-rejects everything the branches introduced.
+doc "additionalProperties does not look inside allOf" << 'END_DOC'
+Demo 09 showed how a schema forbids extra properties:
+"additionalProperties": false rejects every property that the
+"properties" beside it does not name. Beside it means in the same
+schema object: which members are extra is determined by that one
+"properties" alone.
 
-unevaluatedProperties: false is the keyword that sees through composition.
-It runs after the branches and rejects only what no evaluated subschema
-claimed. That makes it the construct closure rests on whenever a schema is
-assembled from parts rather than written flat.
-
-Both validators below are pinned to JSON Schema 2020-12. The keyword was
-introduced in 2019-09: a draft-07 validator does not know it, and unknown
-keywords are ignored rather than rejected, so the same schema silently
-fails open — the invalid instance would pass.
+In the schema below, "a" and "b" are described in two "allOf"
+branches. Each branch is a complete schema of its own (demo 09), and
+each branch's "properties" is a member of that branch, not of the
+outer schema object. The outer schema object -- the one holding the
+"additionalProperties": false -- has no "properties" of its own, so
+every member of the instance is extra: both validators reject an
+object that satisfies both branches. jsonschema names both extras in
+one line; ajv prints one line per extra property, the same words each
+time.
 END_DOC
 
-show "the schema"  cat schema.json
+show "two allOf branches, closed with additionalProperties: false"  cat schema-additional.json
 
-doc "what to watch for" << 'END_DOC'
-Property "c" appears in no allOf branch. The valid instance omits it and
-passes; the invalid instance carries it and is rejected by both validators,
-in different words but with the same verdict.
+show "an object with a and b"                                cat instance-a-b.json
+show "jsonschema (Python): a and b, additionalProperties"    jsonschema-validate --schema schema-additional.json --instance instance-a-b.json
+show "ajv (JavaScript): a and b, additionalProperties"       ajv-validate        --schema schema-additional.json --instance instance-a-b.json
+
+doc "unevaluatedProperties rejects what nothing evaluated" << 'END_DOC'
+"unevaluatedProperties" fixes exactly this, and its name says how. A
+member of the instance is evaluated when the validator checks it
+against a schema -- here, "a" and "b" are evaluated in the branches,
+each checked against the schema its "properties" pairs it with. The
+value of "unevaluatedProperties" is the schema for every member
+evaluated nowhere in the whole schema, branches included -- the same
+schema position as in demo 09, and false again rejects them all.
+
+The schema below closes the same two branches with
+"unevaluatedProperties": false. The object that was just rejected now
+passes, and an object carrying "c" -- a member evaluated nowhere --
+is rejected by both validators, in different words but with the same
+verdict.
 END_DOC
 
-show "the valid instance"                     cat instance-valid.json
-show "jsonschema (Python): valid instance"    jsonschema-validate --schema schema.json --instance instance-valid.json
-show "ajv (JavaScript): valid instance"       ajv-validate        --schema schema.json --instance instance-valid.json
+show "the same branches, closed with unevaluatedProperties: false"  cat schema-unevaluated.json
 
-show "the invalid instance"                   cat instance-invalid.json
-show "jsonschema (Python): invalid instance"  jsonschema-validate --schema schema.json --instance instance-invalid.json
-show "ajv (JavaScript): invalid instance"     ajv-validate        --schema schema.json --instance instance-invalid.json
+show "jsonschema (Python): a and b, unevaluatedProperties"   jsonschema-validate --schema schema-unevaluated.json --instance instance-a-b.json
+show "ajv (JavaScript): a and b, unevaluatedProperties"      ajv-validate        --schema schema-unevaluated.json --instance instance-a-b.json
+
+show "an extra property c"                                   cat instance-a-b-c.json
+show "jsonschema (Python): extra c"                          jsonschema-validate --schema schema-unevaluated.json --instance instance-a-b-c.json
+show "ajv (JavaScript): extra c"                             ajv-validate        --schema schema-unevaluated.json --instance instance-a-b-c.json
 
 doc "what if a or b is left out?" << 'END_DOC'
-Nothing rejects them. unevaluatedProperties governs which properties may
-appear, not which must — and properties is likewise a conditional: it says
-"if this key is present, here is its shape." Neither keyword makes anything
-mandatory. Only required does that, and this schema has no required.
-
-So the schema closes the object without populating it: omit b, or omit
-both, and it still validates. The empty object passes a schema that reads
-at a glance as describing two string properties.
-
-That is the pairing to remember. unevaluatedProperties: false answers "may
-anything else appear?"; required answers "must these appear?" A closed
-schema with no required is closed and empty-able at the same time, which is
-almost never what the author meant. See demo 04 for the same trap without
-the composition.
+Nothing in either schema requires "a" or "b" to be present. A
+"properties" entry says what a member must satisfy if the member is
+present (demo 02), and "unevaluatedProperties" says what an extra
+property must satisfy if one appears; neither makes any member
+mandatory. Only "required" does that (demo 04), and these schemas have
+no "required". So the schema closed with "unevaluatedProperties"
+accepts an object without "b", and the empty object too: no property
+present, none extra, nothing required.
 END_DOC
 
-show "only a"                                 cat instance-only-a.json
-show "jsonschema (Python): only a"            jsonschema-validate --schema schema.json --instance instance-only-a.json
-show "ajv (JavaScript): only a"               ajv-validate        --schema schema.json --instance instance-only-a.json
+show "only a"                                     cat instance-only-a.json
+show "jsonschema (Python): only a"                jsonschema-validate --schema schema-unevaluated.json --instance instance-only-a.json
+show "ajv (JavaScript): only a"                   ajv-validate        --schema schema-unevaluated.json --instance instance-only-a.json
 
-show "neither a nor b"                        cat instance-empty.json
-show "jsonschema (Python): neither a nor b"   jsonschema-validate --schema schema.json --instance instance-empty.json
-show "ajv (JavaScript): neither a nor b"      ajv-validate        --schema schema.json --instance instance-empty.json
+show "neither a nor b"                            cat instance-empty.json
+show "jsonschema (Python): neither a nor b"       jsonschema-validate --schema schema-unevaluated.json --instance instance-empty.json
+show "ajv (JavaScript): neither a nor b"          ajv-validate        --schema schema-unevaluated.json --instance instance-empty.json
+
+doc "required and unevaluatedProperties together" << 'END_DOC'
+To make "a" and "b" mandatory as well as block everything else, add
+"required". The schema below is the previous one -- the two branches
+closed with "unevaluatedProperties": false -- with one more member in
+the outer schema object: "required": ["a", "b"]. The "required" and
+the branches refer to "a" and "b" independently ("required" tests
+only presence; demo 04), and their constraints combine: the instance
+must include both members (the "required"), and both values must be
+strings (the branches), while "unevaluatedProperties" continues to
+disallow other members of the instance. So now the object with both
+members still passes, the object missing "b" is rejected, and an
+extra "c" is still rejected -- each verdict from both validators.
+END_DOC
+
+show "the same schema, with required"             cat schema-unevaluated-required.json
+
+show "jsonschema (Python): a and b"               jsonschema-validate --schema schema-unevaluated-required.json --instance instance-a-b.json
+show "ajv (JavaScript): a and b"                  ajv-validate        --schema schema-unevaluated-required.json --instance instance-a-b.json
+
+show "jsonschema (Python): only a"                jsonschema-validate --schema schema-unevaluated-required.json --instance instance-only-a.json
+show "ajv (JavaScript): only a"                   ajv-validate        --schema schema-unevaluated-required.json --instance instance-only-a.json
+
+show "jsonschema (Python): extra c"               jsonschema-validate --schema schema-unevaluated-required.json --instance instance-a-b-c.json
+show "ajv (JavaScript): extra c"                  ajv-validate        --schema schema-unevaluated-required.json --instance instance-a-b-c.json
+
+doc "a caution about older validators" << 'END_DOC'
+"unevaluatedProperties" is newer than the other keywords here: it
+entered the language in the 2019-09 version. To a validator built for
+an earlier version it is an unknown member, and unknown members are
+ignored (demo 01) -- such a validator accepts every extra property and
+reports nothing. jsonschema-validate and ajv-validate implement
+2020-12, and refuse a schema that declares an older version rather
+than reinterpreting it (demo 20).
+END_DOC
 
 exit 0
