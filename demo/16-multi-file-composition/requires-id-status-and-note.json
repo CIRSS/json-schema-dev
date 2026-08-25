@@ -1,0 +1,6 @@
+{
+  "$id": "https://example.org/schemas/requires-id-status-and-note",
+  "allOf": [ { "$ref": "https://example.org/schemas/requires-status-and-id" } ],
+  "properties": { "note": { "type": "string" } },
+  "required": ["note"]
+}

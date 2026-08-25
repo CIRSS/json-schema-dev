@@ -1,0 +1,18 @@
+{
+  "$id": "https://example.org/schemas/requires-id-status-and-creator",
+  "allOf": [ { "$ref": "https://example.org/schemas/requires-id" } ],
+  "properties": {
+    "status": { "type": "string" },
+    "creator": {
+      "allOf": [ { "$ref": "https://example.org/schemas/requires-id" } ],
+      "properties": {
+        "id": { "pattern": "^[a-z][a-z0-9+.-]*:" },
+        "name": { "type": "string" }
+      },
+      "required": ["name"],
+      "unevaluatedProperties": false
+    }
+  },
+  "required": ["status", "creator"],
+  "unevaluatedProperties": false
+}

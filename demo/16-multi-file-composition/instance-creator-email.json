@@ -1,0 +1,5 @@
+{
+  "id": "r1",
+  "status": "draft",
+  "creator": { "id": "https://example.org/people/p1", "name": "n1", "email": "x" }
+}
