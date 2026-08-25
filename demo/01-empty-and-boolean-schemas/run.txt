@@ -6,16 +6,15 @@
 
 ===== [1] a schema need not be an object =====================================
 
-A schema is itself JSON -- a single JSON document. And what may serve
-as a schema is specified the way anything in JSON is specified: by a
-schema. That published schema-for-schemas, the meta-schema, admits
-exactly two of JSON's six kinds of values: boolean, and object --
-which, despite its name, is just a string-keyed map, written {...}.
-Both boolean values are schemas: true is the schema that accepts every
-instance, false the schema that rejects every instance. Some objects
-are valid schemas and some are not; the last cells below show the
-difference. The empty object {} is a schema, declares no constraints,
-and so behaves exactly like true.
+A schema is itself JSON -- a single JSON document, and it can be
+a value of only two of JSON's six kinds: boolean, or object --
+which, despite its name, is just a string-keyed map, written
+{...}. Both boolean values are schemas: true is the schema that
+accepts every instance, false the schema that rejects every
+instance. The map can be empty: {} is a schema, declares no
+constraints, and so behaves exactly like true. Some objects are
+valid schemas and some are not; the last cells below show the
+difference.
 
 That {} accepts everything is the fact people most often misread. A
 schema can reject an instance only by stating a constraint the
@@ -218,10 +217,17 @@ Second, a member whose name is a keyword must have a value of the form
 that keyword requires. The value of "type" must be a string naming a
 kind (or a list of such strings); the number 5 is neither. An object
 containing "type": 5 is therefore not a valid schema, and both
-validators refuse to proceed rather than render a verdict. That
-refusal is the meta-schema described in the first cell doing its job:
-the offered "schema" was checked against the schema for schemas, and
-its "type" member, paired with the value 5, failed to be meaningful.
+validators refuse to proceed rather than render a verdict.
+
+The document that decides is itself a schema: what counts as a
+schema is specified the way anything in JSON is specified -- by a
+schema. That schema-for-schemas, the meta-schema, is a JSON
+document that both validators ship as data, and almost all of its
+content states which member names are keywords and the form each
+keyword's value must take. Checking an offered schema is ordinary
+validation -- the meta-schema as the schema, the offered document
+as the instance -- and this document's "type" member, paired with
+the value 5, failed to be meaningful.
 
 The two "schemas" below illustrate the two facts in turn. The first,
 {"foo": "bar"}, has one member, "foo", whose name is not a keyword; the
