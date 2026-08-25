@@ -5,10 +5,13 @@ source "${JSON_SCHEMA_DEV_CELLS_DIR}/cells.sh"
 title "json-schema-dev  ·  demo 12: defs and refs"
 
 doc "a definition written once, enforced everywhere it is referenced" << 'END_DOC'
-"$ref" applies a schema that is written somewhere else. It stands in
-any position that takes a schema: {"$ref": [schema identifier]} is a
-complete schema whose meaning is the schema it points at, enforced as
-if written in its place.
+"$ref" is a keyword. Its value names a schema written somewhere
+else, and its requirement is that the instance satisfy the named
+schema. A schema object requires everything its keywords require
+(demo 08), so an object holding nothing but a "$ref" is a complete
+schema meaning exactly the schema it names: it stands in any
+position that takes a schema, enforced as if written in its place.
+That is the only form of "$ref" in this demo.
 
 "$defs" is the safest place to put schemas that should be defined but
 not applied where they are written. A "$defs" entry is applied to no
