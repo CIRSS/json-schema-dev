@@ -2,7 +2,7 @@
 
 source "${JSON_SCHEMA_DEV_CELLS_DIR}/cells.sh"
 
-title "json-schema-dev  ·  demo 20: declared versions"
+title "json-schema-dev  ·  demo 22: declared versions"
 
 doc "a declared version is honored or refused, never reinterpreted" << 'END_DOC'
 JSON Schema has evolved through several versions, and a schema may

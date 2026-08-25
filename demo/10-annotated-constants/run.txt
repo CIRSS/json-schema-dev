@@ -67,7 +67,7 @@ The reports differ in length. For the "enum", each validator gives one
 line (Python's names the allowed values; Ajv's does not). For the "oneOf",
 Python again gives one line, while Ajv reports each entry's failure
 separately and then the summary. The longer report is the cost of the
-annotated form; demo 17 shows how a schema can supply its own message in
+annotated form; demo 19 shows how a schema can supply its own message in
 place of the validator's.
 
 ----- [10] a value outside the set -------------------------------------------

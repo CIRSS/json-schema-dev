@@ -166,7 +166,7 @@ def custom_message(error, schema):
     errorMessage is a nonstandard keyword (Ajv's ajv-errors plugin defines
     it) that the jsonschema library ignores -- but a schema is JSON, so the
     messages are data this wrapper can read for itself. Supported here is the
-    portable subset cross-validated by demo 16: a plain-string errorMessage
+    portable subset cross-validated by demo 19: a plain-string errorMessage
     covers every failure within its subschema, an object supplies one message
     per failing keyword, and ${/json/pointer} interpolates the instance value
     at that pointer (JSON-encoded, resolved from the instance root, matching

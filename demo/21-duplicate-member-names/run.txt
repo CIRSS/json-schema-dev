@@ -1,6 +1,6 @@
 ##############################################################################
 #
-#   json-schema-dev  ·  demo 19: duplicate member names
+#   json-schema-dev  ·  demo 21: duplicate member names
 #
 ##############################################################################
 
@@ -23,7 +23,7 @@ wrappers offer --reject-duplicate-members: with the flag, a duplicate
 member name anywhere in the instance is a verdict, not tolerated noise.
 Every duplicate name is collected and reported sorted, one line per name,
 so the two wrappers emit word-for-word identical output -- authored
-uniformity in the same family as demo 17. Data models built atop JSON
+uniformity in the same family as demo 19. Data models built atop JSON
 often require what JSON merely recommends: JSON-LD's maps must have
 unique keys, so a JSON-LD checking pipeline turns this flag on.
 

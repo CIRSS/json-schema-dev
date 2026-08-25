@@ -2,7 +2,7 @@
 
 source "${JSON_SCHEMA_DEV_CELLS_DIR}/cells.sh"
 
-title "json-schema-dev  ·  demo 18: non json instances"
+title "json-schema-dev  ·  demo 20: non json instances"
 
 doc "a non-JSON document gets a verdict, not an error" << 'END_DOC'
 The wrappers separate facts about the submitted document from facts about

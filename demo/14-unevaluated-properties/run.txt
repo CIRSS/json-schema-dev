@@ -218,4 +218,4 @@ an earlier version it is an unknown member, and unknown members are
 ignored (demo 01) -- such a validator accepts every extra property and
 reports nothing. jsonschema-validate and ajv-validate implement
 2020-12, and refuse a schema that declares an older version rather
-than reinterpreting it (demo 20).
+than reinterpreting it (demo 22).

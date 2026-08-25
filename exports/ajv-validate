@@ -209,7 +209,7 @@ function main() {
   // ajv-errors registers the (nonstandard) errorMessage keyword: a schema
   // author's message replaces the library's for failures it covers. The
   // matching lookup is implemented independently in jsonschema-validate, so
-  // authored messages are cross-validated like verdicts (demo 16).
+  // authored messages are cross-validated like verdicts (demo 19).
   //
   // validateFormats: false makes "format" a pure annotation on this leg,
   // silently, matching the Python leg (which has no format checker
