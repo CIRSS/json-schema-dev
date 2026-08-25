@@ -1,0 +1,6 @@
+{
+  "text": "t1",
+  "replies": [
+    { "text": "t2", "replies": [ { "text": "t3" } ] }
+  ]
+}

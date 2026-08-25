@@ -1,0 +1,13 @@
+{
+  "$defs": {
+    "comment": {
+      "type": "object",
+      "properties": {
+        "text": { "type": "string" },
+        "replies": { "type": "array", "items": { "$ref": "#/$defs/comment" } }
+      },
+      "required": ["text"]
+    }
+  },
+  "$ref": "#/$defs/comment"
+}
