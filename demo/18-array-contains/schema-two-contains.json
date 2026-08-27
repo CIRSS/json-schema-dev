@@ -1,7 +1,0 @@
-{
-  "type": "array",
-  "allOf": [
-    { "contains": { "const": "core" } },
-    { "contains": { "const": "ext1" } }
-  ]
-}

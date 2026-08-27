@@ -1,4 +1,0 @@
-{
-  "type": "array",
-  "items": { "not": { "const": "core" } }
-}

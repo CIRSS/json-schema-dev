@@ -1,6 +1,0 @@
-{
-  "title": "Account balance",
-  "description": "The balance in dollars, as a JSON number, never as a JSON string.",
-  "$comment": "Reviewed 2026-08-11. JSON strings are rejected here.",
-  "type": "string"
-}

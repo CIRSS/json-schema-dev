@@ -1,6 +1,0 @@
-{
-  "type": "array",
-  "contains": {
-    "const": { "p1": "https://example.org/ns1", "p2": "https://example.org/ns2" }
-  }
-}

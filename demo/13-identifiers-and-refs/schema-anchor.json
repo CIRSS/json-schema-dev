@@ -1,9 +1,0 @@
-{
-  "$defs": {
-    "named": {
-      "$anchor": "named",
-      "properties": { "a": { "type": "number" } }
-    }
-  },
-  "$ref": "#named"
-}

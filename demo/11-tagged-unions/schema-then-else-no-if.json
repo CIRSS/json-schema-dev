@@ -1,1 +1,0 @@
-{"then": {"required": ["radius"]}, "else": {"required": ["side"]}}

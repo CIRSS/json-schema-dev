@@ -1,8 +1,0 @@
-{
-  "type": "array",
-  "contains": {
-    "type": "object",
-    "properties": { "id": { "type": "string" } },
-    "required": ["id"]
-  }
-}

@@ -1,8 +1,0 @@
-{
-  "type": "object",
-  "properties": {
-    "text": { "type": "string" },
-    "replies": { "type": "array", "items": { "$ref": "#" } }
-  },
-  "required": ["text"]
-}

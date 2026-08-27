@@ -1,7 +1,0 @@
-{
-  "$id": "https://example.org/schemas/root",
-  "$defs": {
-    "named": { "properties": { "a": { "type": "string" } } }
-  },
-  "$ref": "named"
-}

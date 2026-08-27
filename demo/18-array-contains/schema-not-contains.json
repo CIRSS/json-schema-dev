@@ -1,4 +1,0 @@
-{
-  "type": "array",
-  "not": { "contains": { "const": "core" } }
-}

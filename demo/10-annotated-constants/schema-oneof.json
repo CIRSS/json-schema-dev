@@ -1,6 +1,0 @@
-{
-  "oneOf": [
-    { "const": "draft", "description": "not yet reviewed; content may change" },
-    { "const": "final", "description": "reviewed and frozen; content is fixed" }
-  ]
-}

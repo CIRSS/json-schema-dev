@@ -1,8 +1,0 @@
-{
-  "anyOf": [
-    { "allOf": [ { "properties": { "kind": { "const": "circle" } }, "required": ["kind"] },
-                 { "required": ["radius"] } ] },
-    { "allOf": [ { "not": { "properties": { "kind": { "const": "circle" } }, "required": ["kind"] } },
-                 { "required": ["side"] } ] }
-  ]
-}

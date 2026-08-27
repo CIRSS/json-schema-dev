@@ -1,6 +1,0 @@
-{
-  "$defs": {
-    "named": { "properties": { "a": { "type": "number" } } }
-  },
-  "$ref": "#/$defs/named"
-}

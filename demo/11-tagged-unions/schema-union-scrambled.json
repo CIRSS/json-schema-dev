@@ -1,5 +1,0 @@
-{
-  "else": { "required": ["side"] },
-  "then": { "required": ["radius"] },
-  "if":   { "properties": { "kind": { "const": "circle" } }, "required": ["kind"] }
-}
