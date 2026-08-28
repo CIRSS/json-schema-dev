@@ -1,0 +1,219 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cirss.github.io/json-schema-dev/corpus-schema.json",
+  "title": "A conformance corpus file",
+  "description": "The shape of one file under tests/corpus. Every corpus file is checked against this schema, by both validators.",
+
+  "type": "object",
+  "required": ["group", "description", "cases"],
+  "properties": {
+    "group": {
+      "type": "string",
+      "description": "The group's title in the test report; a topic, not a slug."
+    },
+    "description": {
+      "type": "string",
+      "description": "What this group of cases is about, and why the area is worth pinning."
+    },
+    "cases": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/case" }
+    }
+  },
+  "$comment": "Closed so a mistyped key is reported rather than ignored.",
+  "additionalProperties": false,
+
+  "$defs": {
+    "case": {
+      "type": "object",
+      "title": "One case: an input, an invocation, and the behavior it records",
+      "required": ["name", "expect"],
+
+      "allOf": [
+        {
+          "$comment": "Exactly one form of each document. A case carrying both is rejected rather than resolved silently.",
+          "oneOf": [
+            { "required": ["schema"] },
+            { "required": ["schemaText"] }
+          ]
+        },
+        {
+          "oneOf": [
+            { "required": ["instance"] },
+            { "required": ["instanceText"] }
+          ]
+        }
+      ],
+
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The claim the case makes, as an independent clause. This is the describe title in the report and what --grep selects on.",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string",
+          "description": "Why the claim is worth asserting, when the claim does not already say it. Omitted rather than made to restate the name."
+        },
+
+        "schema": {
+          "description": "The schema, as inline JSON. Any JSON value: a boolean is a schema too."
+        },
+        "schemaText": {
+          "type": "string",
+          "description": "The schema as raw text, for a case whose schema must not be valid JSON."
+        },
+        "instance": {
+          "description": "The instance, as inline JSON. Any JSON value."
+        },
+        "instanceText": {
+          "type": "string",
+          "description": "The instance as raw text. Required for anything a JSON value cannot carry -- a duplicate member name, or a document that does not parse."
+        },
+        "refs": {
+          "type": "array",
+          "description": "Additional schemas, each passed as one --ref, in order.",
+          "items": {
+            "$comment": "A ref is inline JSON like schema, or a string when it must be raw text."
+          }
+        },
+
+        "args": {
+          "type": "array",
+          "description": "Extra flags appended to the usual --schema/--instance invocation.",
+          "items": { "type": "string" }
+        },
+        "argv": {
+          "type": "array",
+          "description": "The whole argument list instead, for a case about the argument parser. {schema} and {instance} stand in for the materialized paths.",
+          "items": { "type": "string" }
+        },
+
+        "omit": {
+          "$ref": "#/$defs/documentList",
+          "description": "Documents to leave unwritten -- the missing-file cases."
+        },
+        "makeDirectory": {
+          "$ref": "#/$defs/documentList",
+          "description": "Documents to create as a directory instead of a file."
+        },
+
+        "expect": { "$ref": "#/$defs/expectation" },
+
+        "identicalMessages": {
+          "type": "boolean",
+          "description": "Assert both validators emit the same lines word for word. Set only where the wrappers generate the text rather than the libraries.",
+          "const": true
+        },
+
+        "defect": { "$ref": "#/$defs/defect" }
+      },
+
+      "$comment": "Closed so a mistyped key is reported rather than ignored.",
+      "additionalProperties": false
+    },
+
+    "documentList": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "enum": ["schema", "instance"] }
+    },
+
+    "expectation": {
+      "type": "object",
+      "title": "What a run of this case produces",
+      "description": "What the case produced when it was last run. Each field is a single value when the two validators agree, or an object keyed by validator when they do not.",
+      "required": ["exit", "stdout"],
+      "properties": {
+        "exit": {
+          "oneOf": [
+            { "$ref": "#/$defs/exitStatus" },
+            { "$ref": "#/$defs/perLegExit" }
+          ]
+        },
+        "stdout": {
+          "oneOf": [
+            { "$ref": "#/$defs/verdictLines" },
+            { "$ref": "#/$defs/perLegStdout" }
+          ]
+        },
+        "stderrContains": {
+          "description": "A substring each validator's stderr must contain. Matched loosely because diagnostics quote paths and library prose.",
+          "oneOf": [
+            { "type": "string" },
+            { "$ref": "#/$defs/perLegStderr" }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "exitStatus": {
+      "description": "0 the instance is valid, 1 it is invalid, 2 the run could not be made to happen as asked.",
+      "enum": [0, 1, 2]
+    },
+
+    "verdictLines": {
+      "type": "array",
+      "description": "stdout as lines, without trailing newline. Empty when the run printed nothing.",
+      "items": { "type": "string" }
+    },
+
+    "perLegExit": {
+      "type": "object",
+      "required": ["jsonschema-validate", "ajv-validate"],
+      "properties": {
+        "jsonschema-validate": { "$ref": "#/$defs/exitStatus" },
+        "ajv-validate": { "$ref": "#/$defs/exitStatus" }
+      },
+      "additionalProperties": false
+    },
+
+    "perLegStdout": {
+      "type": "object",
+      "required": ["jsonschema-validate", "ajv-validate"],
+      "properties": {
+        "jsonschema-validate": { "$ref": "#/$defs/verdictLines" },
+        "ajv-validate": { "$ref": "#/$defs/verdictLines" }
+      },
+      "additionalProperties": false
+    },
+
+    "perLegStderr": {
+      "type": "object",
+      "required": ["jsonschema-validate", "ajv-validate"],
+      "properties": {
+        "jsonschema-validate": { "type": "string" },
+        "ajv-validate": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+
+    "defect": {
+      "type": "object",
+      "title": "Behavior the case pins as current and wrong",
+      "description": "Why the behavior this case records is wrong, and what it should become.",
+      "required": ["summary", "should"],
+      "properties": {
+        "summary": {
+          "type": "string",
+          "description": "What is wrong, stated as a fact about the wrappers.",
+          "minLength": 1
+        },
+        "should": {
+          "type": "string",
+          "description": "What the behavior should become.",
+          "minLength": 1
+        },
+        "divergent": {
+          "type": "boolean",
+          "description": "Set when the defect makes the two validators disagree, which suspends this case's cross-validator check. Omitted for a defect they share, which leaves them agreeing.",
+          "const": true
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}
