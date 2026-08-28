@@ -1,0 +1,210 @@
+{
+  "group": "verdicts, errors, and exit status",
+  "description": "The wrappers' own contract, as opposed to the libraries': 0 valid, 1 invalid, 2 error. The governing rule is that everything about the submitted instance is a verdict and everything about the setup is an error — so an instance that does not parse exits 1, while a schema that does not parse exits 2.",
+  "cases": [
+    {
+      "name": "a satisfied schema prints VALID and exits 0",
+      "schema": {
+        "type": "object",
+        "required": [
+          "id"
+        ]
+      },
+      "instance": {
+        "id": "x"
+      },
+      "expect": {
+        "exit": 0,
+        "stdout": [
+          "VALID"
+        ]
+      }
+    },
+    {
+      "name": "an unsatisfied schema prints INVALID and exits 1",
+      "schema": {
+        "type": "object",
+        "required": [
+          "id"
+        ]
+      },
+      "instance": {},
+      "expect": {
+        "exit": 1,
+        "stdout": {
+          "jsonschema-validate": [
+            "INVALID: 'id' is a required property"
+          ],
+          "ajv-validate": [
+            "INVALID: must have required property 'id'"
+          ]
+        }
+      }
+    },
+    {
+      "name": "an instance that is not JSON is a verdict, not an error",
+      "description": "A delivered document that fails the JSON grammar has failed validation's lowest tier: a verdict, not an error.",
+      "schema": {},
+      "instanceText": "{\"id\": \"x\"",
+      "expect": {
+        "exit": 1,
+        "stdout": {
+          "jsonschema-validate": [
+            "INVALID: instance is not valid JSON: Expecting ',' delimiter: line 1 column 11 (char 10)"
+          ],
+          "ajv-validate": [
+            "INVALID: instance is not valid JSON: Expected ',' or '}' after property value in JSON at position 10 (line 1 column 11)"
+          ]
+        }
+      }
+    },
+    {
+      "name": "a schema that is not JSON is an error",
+      "schemaText": "{\"type\": ",
+      "instance": {},
+      "expect": {
+        "exit": 2,
+        "stdout": [],
+        "stderrContains": {
+          "jsonschema-validate": "jsonschema-validate: error: schema file {dir}/schema.json is not valid JSON: Expecting value: line 1 column 10 (char 9)",
+          "ajv-validate": "ajv-validate: error: schema file {dir}/schema.json is not valid JSON: Unexpected end of JSON input"
+        }
+      }
+    },
+    {
+      "name": "a schema that parses but is not a schema is an error",
+      "schema": {
+        "type": 5
+      },
+      "instance": {},
+      "expect": {
+        "exit": 2,
+        "stdout": [],
+        "stderrContains": {
+          "jsonschema-validate": "jsonschema-validate: error: {dir}/schema.json is not a valid JSON Schema: 5 is not valid under any of the given schemas",
+          "ajv-validate": "ajv-validate: error: {dir}/schema.json is not a valid JSON Schema: data/type must be equal to one of the allowed values, data/type must be array, data/type must match a schema in anyOf"
+        }
+      }
+    },
+    {
+      "name": "a missing instance file is an error, not a verdict",
+      "description": "A file that cannot be read at all is operational, even though it stands where the instance would.",
+      "schema": {},
+      "instance": {},
+      "omit": [
+        "instance"
+      ],
+      "expect": {
+        "exit": 2,
+        "stdout": [],
+        "stderrContains": {
+          "jsonschema-validate": "jsonschema-validate: error: instance file not found: {dir}/instance.json",
+          "ajv-validate": "ajv-validate: error: instance file not found: {dir}/instance.json"
+        }
+      }
+    },
+    {
+      "name": "a missing schema file is an error",
+      "schema": {},
+      "instance": {},
+      "omit": [
+        "schema"
+      ],
+      "expect": {
+        "exit": 2,
+        "stdout": [],
+        "stderrContains": {
+          "jsonschema-validate": "jsonschema-validate: error: schema file not found: {dir}/schema.json",
+          "ajv-validate": "ajv-validate: error: schema file not found: {dir}/schema.json"
+        }
+      }
+    },
+    {
+      "name": "a directory named as the instance is an error",
+      "schema": {},
+      "instance": {},
+      "makeDirectory": [
+        "instance"
+      ],
+      "expect": {
+        "exit": 2,
+        "stdout": [],
+        "stderrContains": {
+          "jsonschema-validate": "jsonschema-validate: error: instance path is a directory: {dir}/instance.json",
+          "ajv-validate": "ajv-validate: error: instance path is a directory: {dir}/instance.json"
+        }
+      }
+    },
+    {
+      "name": "a $ref naming nothing the validator holds is an error, not an invalid instance",
+      "description": "A $ref naming nothing the validator holds. Ajv resolves at compile time and python-jsonschema on first use, but both report it as an error rather than as an invalid instance.",
+      "schema": {
+        "$ref": "#/$defs/absent"
+      },
+      "instance": {},
+      "expect": {
+        "exit": 2,
+        "stdout": [],
+        "stderrContains": {
+          "jsonschema-validate": "jsonschema-validate: error: {dir}/schema.json contains an unresolvable $ref: PointerToNowhere: '/$defs/absent' does not exist within {'$ref': '#/$defs/absent'}",
+          "ajv-validate": "ajv-validate: error: {dir}/schema.json is not a valid JSON Schema: can't resolve reference #/$defs/absent from id #"
+        }
+      }
+    },
+    {
+      "name": "both --schema and --instance are required",
+      "schema": {},
+      "instance": {},
+      "argv": [
+        "--schema",
+        "{schema}"
+      ],
+      "expect": {
+        "exit": 2,
+        "stdout": [],
+        "stderrContains": {
+          "jsonschema-validate": "usage: jsonschema-validate [-h] -s FILE -i FILE [-r FILE]",
+          "ajv-validate": "ajv-validate: error: both --schema and --instance are required"
+        }
+      }
+    },
+    {
+      "name": "an option neither wrapper defines is refused",
+      "schema": {},
+      "instance": {},
+      "argv": [
+        "--schema",
+        "{schema}",
+        "--instance",
+        "{instance}",
+        "--nonesuch"
+      ],
+      "expect": {
+        "exit": 2,
+        "stdout": [],
+        "stderrContains": {
+          "jsonschema-validate": "usage: jsonschema-validate [-h] -s FILE -i FILE [-r FILE]",
+          "ajv-validate": "ajv-validate: error: Unknown option '--nonesuch'"
+        }
+      }
+    },
+    {
+      "name": "a positional argument is refused rather than read as schema or instance",
+      "description": "Arguments are named so the schema and instance cannot be transposed; a positional is not accepted as either.",
+      "schema": {},
+      "instance": {},
+      "argv": [
+        "{schema}",
+        "{instance}"
+      ],
+      "expect": {
+        "exit": 2,
+        "stdout": [],
+        "stderrContains": {
+          "jsonschema-validate": "usage: jsonschema-validate [-h] -s FILE -i FILE [-r FILE]",
+          "ajv-validate": "ajv-validate: error: Unexpected argument '{dir}/schema.json'. This command does not take positional arguments"
+        }
+      }
+    }
+  ]
+}

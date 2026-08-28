@@ -1,0 +1,241 @@
+{
+  "group": "authored messages",
+  "description": "errorMessage is nonstandard — Ajv gets it from the ajv-errors plugin, and jsonschema-validate implements the same portable subset independently by reading the messages out of the schema JSON. Two independent implementations of one behavior is exactly the shape that wants a conformance suite, and an authored message is the one place the two legs are contracted to emit the identical sentence.",
+  "cases": [
+    {
+      "name": "a plain-string errorMessage covers every failure within its subschema",
+      "description": "A plain-string errorMessage replaces the library's message for any failure within its subschema.",
+      "schema": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "errorMessage": "a record needs an id"
+      },
+      "instance": {},
+      "identicalMessages": true,
+      "expect": {
+        "exit": 1,
+        "stdout": [
+          "INVALID: a record needs an id"
+        ]
+      }
+    },
+    {
+      "name": "an object errorMessage supplies one message per failing keyword",
+      "description": "An object errorMessage supplies one message per failing keyword.",
+      "schema": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "errorMessage": {
+          "required": "a record needs an id",
+          "type": "a record must be an object"
+        }
+      },
+      "instance": {},
+      "identicalMessages": true,
+      "expect": {
+        "exit": 1,
+        "stdout": [
+          "INVALID: a record needs an id"
+        ]
+      }
+    },
+    {
+      "name": "the object form selects the message for the keyword that actually failed",
+      "description": "The same schema as the previous case, failing its other keyword.",
+      "schema": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "errorMessage": {
+          "required": "a record needs an id",
+          "type": "a record must be an object"
+        }
+      },
+      "instance": [],
+      "identicalMessages": true,
+      "expect": {
+        "exit": 1,
+        "stdout": [
+          "INVALID: a record must be an object"
+        ]
+      }
+    },
+    {
+      "name": "a failure no authored message covers keeps the library's own message",
+      "description": "A failure no authored message covers keeps each library's own message — the divergence errorMessage exists to close.",
+      "schema": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          }
+        },
+        "errorMessage": {
+          "required": "a record needs an id"
+        }
+      },
+      "instance": {
+        "id": 5
+      },
+      "expect": {
+        "exit": 1,
+        "stdout": {
+          "jsonschema-validate": [
+            "INVALID: /id: 5 is not of type 'string'"
+          ],
+          "ajv-validate": [
+            "INVALID: /id: must be string"
+          ]
+        }
+      }
+    },
+    {
+      "name": "the nearest enclosing errorMessage beats an outer one",
+      "description": "The lookup walks outward from the failing keyword and takes the first message it meets, so an inner message beats an outer one.",
+      "schema": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "errorMessage": "an id must be a string"
+          }
+        },
+        "errorMessage": "the record is malformed"
+      },
+      "instance": {
+        "id": 5
+      },
+      "identicalMessages": true,
+      "expect": {
+        "exit": 1,
+        "stdout": [
+          "INVALID: /id: an id must be a string"
+        ]
+      }
+    },
+    {
+      "name": "an absolute pointer interpolates the instance value at that location",
+      "description": "${/a/json/pointer} interpolates the instance value at that pointer, JSON-encoded, resolved from the instance root.",
+      "schema": {
+        "properties": {
+          "artifacts": {
+            "type": "array",
+            "minItems": 2,
+            "errorMessage": "expected at least two artifacts, got ${/artifacts}"
+          }
+        }
+      },
+      "instance": {
+        "artifacts": [
+          "one"
+        ]
+      },
+      "identicalMessages": true,
+      "expect": {
+        "exit": 1,
+        "stdout": [
+          "INVALID: /artifacts: expected at least two artifacts, got [\"one\"]"
+        ]
+      }
+    },
+    {
+      "name": "a relative pointer crashes ajv-validate when the failing keyword is type",
+      "description": "${0} is meant to be the failing value itself, wherever it occurs. It works wherever some other keyword forces Ajv to bind that value to a variable.",
+      "schema": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "errorMessage": "each artifact must be a string; ${0} is not"
+        }
+      },
+      "instance": [
+        "ok",
+        7
+      ],
+      "identicalMessages": true,
+      "expect": {
+        "exit": 1,
+        "stdout": {
+          "jsonschema-validate": [
+            "INVALID: /1: each artifact must be a string; 7 is not"
+          ],
+          "ajv-validate": []
+        },
+        "stderrContains": {
+          "jsonschema-validate": "",
+          "ajv-validate": "undefined:3"
+        }
+      },
+      "defect": {
+        "summary": "ajv-validate crashes. A relative pointer in a subschema whose failing keyword is `type` makes ajv-errors emit JSON.stringify(dataN) for a variable Ajv's codegen never bound, and the generated validator throws ReferenceError. The crash exits 1 — the INVALID code — with nothing on stdout, so a caller scripting on exit status reads a crash as a verdict.",
+        "should": "The wrapper should catch anything thrown during validation and exit 2, since a crash is a fact about the setup and not about the instance. The underlying ajv-errors incompatibility should be reported upstream; adding any keyword that forces Ajv to bind the value (pattern, for one) is the current workaround.",
+        "divergent": true
+      }
+    },
+    {
+      "name": "a relative pointer with a path climbs from the failing value and descends again",
+      "description": "${1/digest} climbs one level from the failing value and descends again.",
+      "schema": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "size": {
+              "type": "number",
+              "errorMessage": "bad size on the artifact with digest ${1/digest}"
+            }
+          }
+        }
+      },
+      "instance": [
+        {
+          "digest": "abc123",
+          "size": "large"
+        }
+      ],
+      "identicalMessages": true,
+      "expect": {
+        "exit": 1,
+        "stdout": [
+          "INVALID: /0/size: bad size on the artifact with digest \"abc123\""
+        ]
+      }
+    },
+    {
+      "name": "an unresolvable pointer is left as written by one leg and replaced with undefined by the other",
+      "description": "A pointer that does not resolve is left in the message verbatim rather than guessed at.",
+      "schema": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "errorMessage": "missing id on ${/nonexistent/path}"
+      },
+      "instance": {},
+      "identicalMessages": true,
+      "expect": {
+        "exit": 1,
+        "stdout": {
+          "jsonschema-validate": [
+            "INVALID: missing id on ${/nonexistent/path}"
+          ],
+          "ajv-validate": [
+            "INVALID: missing id on undefined"
+          ]
+        }
+      },
+      "defect": {
+        "summary": "The two errorMessage implementations disagree on an unresolvable pointer: jsonschema-validate leaves ${/nonexistent/path} in the message as written, and ajv-errors substitutes the text `undefined`.",
+        "should": "The portable subset must pick one behavior and both legs must implement it. Leaving the pointer as written is the honest one — `undefined` asserts a value the instance does not have.",
+        "divergent": true
+      }
+    }
+  ]
+}

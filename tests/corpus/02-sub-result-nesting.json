@@ -1,0 +1,467 @@
+{
+  "group": "conclusions and the sub-results behind them",
+  "description": "Applicator keywords produce a conclusion — the requirement the instance violated — and the sub-results that led to it. The wrappers currently print both as equal INVALID lines, which gives a reason the standing of a requirement. These cases pin what each keyword family reports today, per family, so the recovery can be tested rather than inferred from a prefix rule.",
+  "cases": [
+    {
+      "name": "contains reports the array's failure, and ajv-validate each element's complaint behind it",
+      "description": "contains requires one satisfying element. The conclusion is the array's failure; a per-element complaint is a sub-result and states no obligation.",
+      "schema": {
+        "type": "array",
+        "contains": {
+          "const": "core"
+        }
+      },
+      "instance": [
+        "ext1",
+        "ext2"
+      ],
+      "expect": {
+        "exit": 1,
+        "stdout": {
+          "jsonschema-validate": [
+            "INVALID: ['ext1', 'ext2'] does not contain items matching the given schema"
+          ],
+          "ajv-validate": [
+            "INVALID: /0: must be equal to constant",
+            "INVALID: /1: must be equal to constant",
+            "INVALID: must contain at least 1 valid item(s)"
+          ]
+        }
+      },
+      "defect": {
+        "summary": "ajv-validate prints an applicator's sub-results as peers of its conclusion; jsonschema-validate prints the conclusion alone, so the two legs report different numbers of lines.",
+        "should": "Both legs should report the conclusion as the failure and its sub-results subordinate to it, recovered per keyword family rather than by a prefix rule over schema pointers.",
+        "divergent": true
+      }
+    },
+    {
+      "name": "an empty array satisfies every items and no contains",
+      "schema": {
+        "type": "array",
+        "contains": {
+          "const": "core"
+        }
+      },
+      "instance": [],
+      "expect": {
+        "exit": 1,
+        "stdout": {
+          "jsonschema-validate": [
+            "INVALID: [] does not contain items matching the given schema"
+          ],
+          "ajv-validate": [
+            "INVALID: must contain at least 1 valid item(s)"
+          ]
+        }
+      }
+    },
+    {
+      "name": "anyOf reports its conclusion, and ajv-validate one sub-result per branch tried",
+      "description": "anyOf reports the conclusion plus one sub-result per branch tried.",
+      "schema": {
+        "anyOf": [
+          {
+            "type": "number"
+          },
+          {
+            "type": "boolean"
+          }
+        ]
+      },
+      "instance": "text",
+      "expect": {
+        "exit": 1,
+        "stdout": {
+          "jsonschema-validate": [
+            "INVALID: 'text' is not valid under any of the given schemas"
+          ],
+          "ajv-validate": [
+            "INVALID: must be number",
+            "INVALID: must be boolean",
+            "INVALID: must match a schema in anyOf"
+          ]
+        }
+      },
+      "defect": {
+        "summary": "ajv-validate prints an applicator's sub-results as peers of its conclusion; jsonschema-validate prints the conclusion alone, so the two legs report different numbers of lines.",
+        "should": "Both legs should report the conclusion as the failure and its sub-results subordinate to it, recovered per keyword family rather than by a prefix rule over schema pointers.",
+        "divergent": true
+      }
+    },
+    {
+      "name": "oneOf reports every branch that failed",
+      "description": "oneOf, like anyOf, reports every branch that failed.",
+      "schema": {
+        "oneOf": [
+          {
+            "const": "draft"
+          },
+          {
+            "const": "final"
+          }
+        ]
+      },
+      "instance": "published",
+      "expect": {
+        "exit": 1,
+        "stdout": {
+          "jsonschema-validate": [
+            "INVALID: 'published' is not valid under any of the given schemas"
+          ],
+          "ajv-validate": [
+            "INVALID: must be equal to constant",
+            "INVALID: must be equal to constant",
+            "INVALID: must match exactly one schema in oneOf"
+          ]
+        }
+      },
+      "defect": {
+        "summary": "ajv-validate prints an applicator's sub-results as peers of its conclusion; jsonschema-validate prints the conclusion alone, so the two legs report different numbers of lines.",
+        "should": "Both legs should report the conclusion as the failure and its sub-results subordinate to it, recovered per keyword family rather than by a prefix rule over schema pointers.",
+        "divergent": true
+      }
+    },
+    {
+      "name": "oneOf fails when more than one branch matches, with no failing sub-result behind it",
+      "description": "oneOf also fails when more than one branch matches — a conclusion with no failing sub-result behind it.",
+      "schema": {
+        "oneOf": [
+          {
+            "type": "number"
+          },
+          {
+            "minimum": 0
+          }
+        ]
+      },
+      "instance": 5,
+      "expect": {
+        "exit": 1,
+        "stdout": {
+          "jsonschema-validate": [
+            "INVALID: 5 is valid under each of {'minimum': 0}, {'type': 'number'}"
+          ],
+          "ajv-validate": [
+            "INVALID: must match exactly one schema in oneOf"
+          ]
+        }
+      }
+    },
+    {
+      "name": "a conditional reports its conclusion under \"if\" and the failure under \"then\"",
+      "description": "A conditional's conclusion and its sub-results sit at different schema locations: the conclusion under \"if\", the failure under \"then\".",
+      "schema": {
+        "if": {
+          "required": [
+            "kind"
+          ],
+          "properties": {
+            "kind": {
+              "const": "circle"
+            }
+          }
+        },
+        "then": {
+          "required": [
+            "radius"
+          ]
+        }
+      },
+      "instance": {
+        "kind": "circle"
+      },
+      "expect": {
+        "exit": 1,
+        "stdout": {
+          "jsonschema-validate": [
+            "INVALID: 'radius' is a required property"
+          ],
+          "ajv-validate": [
+            "INVALID: must have required property 'radius'",
+            "INVALID: must match \"then\" schema"
+          ]
+        }
+      },
+      "defect": {
+        "summary": "ajv-validate prints an applicator's sub-results as peers of its conclusion; jsonschema-validate prints the conclusion alone, so the two legs report different numbers of lines.",
+        "should": "Both legs should report the conclusion as the failure and its sub-results subordinate to it, recovered per keyword family rather than by a prefix rule over schema pointers.",
+        "divergent": true
+      }
+    },
+    {
+      "name": "a conditional reports the else branch's failure the same way",
+      "description": "Ajv names the branch in params.failingKeyword; the conclusion still sits under \"if\".",
+      "schema": {
+        "if": {
+          "required": [
+            "kind"
+          ],
+          "properties": {
+            "kind": {
+              "const": "circle"
+            }
+          }
+        },
+        "then": {
+          "required": [
+            "radius"
+          ]
+        },
+        "else": {
+          "required": [
+            "side"
+          ]
+        }
+      },
+      "instance": {
+        "kind": "square"
+      },
+      "expect": {
+        "exit": 1,
+        "stdout": {
+          "jsonschema-validate": [
+            "INVALID: 'side' is a required property"
+          ],
+          "ajv-validate": [
+            "INVALID: must have required property 'side'",
+            "INVALID: must match \"else\" schema"
+          ]
+        }
+      },
+      "defect": {
+        "summary": "ajv-validate prints an applicator's sub-results as peers of its conclusion; jsonschema-validate prints the conclusion alone, so the two legs report different numbers of lines.",
+        "should": "Both legs should report the conclusion as the failure and its sub-results subordinate to it, recovered per keyword family rather than by a prefix rule over schema pointers.",
+        "divergent": true
+      }
+    },
+    {
+      "name": "allOf's branches are peers, so each failure stands on its own",
+      "description": "allOf's branches are peers, not sub-results: each failure stands on its own.",
+      "schema": {
+        "allOf": [
+          {
+            "required": [
+              "a"
+            ]
+          },
+          {
+            "required": [
+              "b"
+            ]
+          }
+        ]
+      },
+      "instance": {},
+      "expect": {
+        "exit": 1,
+        "stdout": {
+          "jsonschema-validate": [
+            "INVALID: 'a' is a required property",
+            "INVALID: 'b' is a required property"
+          ],
+          "ajv-validate": [
+            "INVALID: must have required property 'a'",
+            "INVALID: must have required property 'b'"
+          ]
+        }
+      }
+    },
+    {
+      "name": "a not failure has no failing value to describe",
+      "description": "A not failure is a success that should not have happened, so there is no failing value to describe.",
+      "schema": {
+        "not": {
+          "type": "string"
+        }
+      },
+      "instance": "text",
+      "expect": {
+        "exit": 1,
+        "stdout": {
+          "jsonschema-validate": [
+            "INVALID: 'text' should not be valid under {'type': 'string'}"
+          ],
+          "ajv-validate": [
+            "INVALID: must NOT be valid"
+          ]
+        }
+      }
+    },
+    {
+      "name": "dependentSchemas applies its schema when the member is present",
+      "description": "dependentSchemas applies a schema when a member is present.",
+      "schema": {
+        "dependentSchemas": {
+          "card": {
+            "required": [
+              "billing"
+            ]
+          }
+        }
+      },
+      "instance": {
+        "card": "4111"
+      },
+      "expect": {
+        "exit": 1,
+        "stdout": {
+          "jsonschema-validate": [
+            "INVALID: 'billing' is a required property"
+          ],
+          "ajv-validate": [
+            "INVALID: must have required property 'billing'"
+          ]
+        }
+      }
+    },
+    {
+      "name": "propertyNames applies its schema to member names, so the failing value is a name",
+      "description": "propertyNames applies its schema to each member name, not to the value — so the failing value is a name.",
+      "schema": {
+        "propertyNames": {
+          "pattern": "^[a-z]+$"
+        }
+      },
+      "instance": {
+        "ok": 1,
+        "Not OK": 2
+      },
+      "expect": {
+        "exit": 1,
+        "stdout": {
+          "jsonschema-validate": [
+            "INVALID: 'Not OK' does not match '^[a-z]+$'"
+          ],
+          "ajv-validate": [
+            "INVALID: must match pattern \"^[a-z]+$\"",
+            "INVALID: property name must be valid"
+          ]
+        }
+      },
+      "defect": {
+        "summary": "ajv-validate prints an applicator's sub-results as peers of its conclusion; jsonschema-validate prints the conclusion alone, so the two legs report different numbers of lines.",
+        "should": "Both legs should report the conclusion as the failure and its sub-results subordinate to it, recovered per keyword family rather than by a prefix rule over schema pointers.",
+        "divergent": true
+      }
+    },
+    {
+      "name": "prefixItems applies its schemas positionally",
+      "schema": {
+        "prefixItems": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "number"
+          }
+        ]
+      },
+      "instance": [
+        "ok",
+        "not a number"
+      ],
+      "expect": {
+        "exit": 1,
+        "stdout": {
+          "jsonschema-validate": [
+            "INVALID: /1: 'not a number' is not of type 'number'"
+          ],
+          "ajv-validate": [
+            "INVALID: /1: must be number"
+          ]
+        }
+      }
+    },
+    {
+      "name": "a failure inside a $ref'd definition is reported at the referring member",
+      "description": "A failure inside a $ref'd definition: whether the nesting survives the boundary is exactly what a prefix rule over schema pointers cannot be trusted about.",
+      "schema": {
+        "$defs": {
+          "tagged": {
+            "anyOf": [
+              {
+                "const": "a"
+              },
+              {
+                "const": "b"
+              }
+            ]
+          }
+        },
+        "properties": {
+          "tag": {
+            "$ref": "#/$defs/tagged"
+          }
+        }
+      },
+      "instance": {
+        "tag": "z"
+      },
+      "expect": {
+        "exit": 1,
+        "stdout": {
+          "jsonschema-validate": [
+            "INVALID: /tag: 'z' is not valid under any of the given schemas"
+          ],
+          "ajv-validate": [
+            "INVALID: /tag: must be equal to constant",
+            "INVALID: /tag: must be equal to constant",
+            "INVALID: /tag: must match a schema in anyOf"
+          ]
+        }
+      },
+      "defect": {
+        "summary": "ajv-validate prints an applicator's sub-results as peers of its conclusion; jsonschema-validate prints the conclusion alone, so the two legs report different numbers of lines.",
+        "should": "Both legs should report the conclusion as the failure and its sub-results subordinate to it, recovered per keyword family rather than by a prefix rule over schema pointers.",
+        "divergent": true
+      }
+    },
+    {
+      "name": "an applicator inside an applicator produces a tree more than one level deep",
+      "description": "An anyOf whose branches are themselves applicators, so the tree is more than one level deep.",
+      "schema": {
+        "anyOf": [
+          {
+            "allOf": [
+              {
+                "type": "object"
+              },
+              {
+                "required": [
+                  "a"
+                ]
+              }
+            ]
+          },
+          {
+            "contains": {
+              "const": "core"
+            }
+          }
+        ]
+      },
+      "instance": [
+        "ext"
+      ],
+      "expect": {
+        "exit": 1,
+        "stdout": {
+          "jsonschema-validate": [
+            "INVALID: ['ext'] is not valid under any of the given schemas"
+          ],
+          "ajv-validate": [
+            "INVALID: must be object",
+            "INVALID: /0: must be equal to constant",
+            "INVALID: must contain at least 1 valid item(s)",
+            "INVALID: must match a schema in anyOf"
+          ]
+        }
+      },
+      "defect": {
+        "summary": "ajv-validate prints an applicator's sub-results as peers of its conclusion; jsonschema-validate prints the conclusion alone, so the two legs report different numbers of lines.",
+        "should": "Both legs should report the conclusion as the failure and its sub-results subordinate to it, recovered per keyword family rather than by a prefix rule over schema pointers.",
+        "divergent": true
+      }
+    }
+  ]
+}

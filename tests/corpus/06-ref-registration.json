@@ -1,0 +1,230 @@
+{
+  "group": "schemas spread over several files",
+  "description": "Each --ref FILE loads an additional schema and registers it under its $id, making it reachable by $ref from the main schema. Nothing is ever fetched from the $id's URI; it is a name to resolve against. A --ref schema without a $id is refused, because there is nothing else to register it under.",
+  "cases": [
+    {
+      "name": "a component in its own file applies by $ref to its $id",
+      "description": "A component in its own file, applied by $ref to its $id.",
+      "schema": {
+        "$id": "https://example.org/composite",
+        "allOf": [
+          {
+            "$ref": "https://example.org/component"
+          }
+        ],
+        "required": [
+          "status"
+        ]
+      },
+      "refs": [
+        {
+          "$id": "https://example.org/component",
+          "type": "object",
+          "required": [
+            "id"
+          ]
+        }
+      ],
+      "instance": {
+        "id": "x",
+        "status": "final"
+      },
+      "expect": {
+        "exit": 0,
+        "stdout": [
+          "VALID"
+        ]
+      }
+    },
+    {
+      "name": "the component's requirements stay in force inside the composite",
+      "description": "Both schemas' requirements are in force; this instance breaks the component's.",
+      "schema": {
+        "$id": "https://example.org/composite",
+        "allOf": [
+          {
+            "$ref": "https://example.org/component"
+          }
+        ],
+        "required": [
+          "status"
+        ]
+      },
+      "refs": [
+        {
+          "$id": "https://example.org/component",
+          "type": "object",
+          "required": [
+            "id"
+          ]
+        }
+      ],
+      "instance": {
+        "status": "final"
+      },
+      "expect": {
+        "exit": 1,
+        "stdout": {
+          "jsonschema-validate": [
+            "INVALID: 'id' is a required property"
+          ],
+          "ajv-validate": [
+            "INVALID: must have required property 'id'"
+          ]
+        }
+      }
+    },
+    {
+      "name": "omitting the --ref that defines a $ref target is an error, not a verdict",
+      "description": "Without the --ref, the $ref resolves to nothing: an error, not a verdict.",
+      "schema": {
+        "$id": "https://example.org/composite",
+        "allOf": [
+          {
+            "$ref": "https://example.org/component"
+          }
+        ]
+      },
+      "instance": {
+        "id": "x"
+      },
+      "expect": {
+        "exit": 2,
+        "stdout": [],
+        "stderrContains": {
+          "jsonschema-validate": "jsonschema-validate: error: {dir}/schema.json contains an unresolvable $ref: Unresolvable: https://example.org/component",
+          "ajv-validate": "ajv-validate: error: {dir}/schema.json is not a valid JSON Schema: can't resolve reference https://example.org/component from id https://example.org/composite"
+        }
+      }
+    },
+    {
+      "name": "a --ref file without a $id is refused",
+      "schema": {
+        "type": "object"
+      },
+      "refs": [
+        {
+          "type": "object",
+          "required": [
+            "id"
+          ]
+        }
+      ],
+      "instance": {},
+      "expect": {
+        "exit": 2,
+        "stdout": [],
+        "stderrContains": {
+          "jsonschema-validate": "jsonschema-validate: error: ref schema file {dir}/ref-0.json has no $id to register it under",
+          "ajv-validate": "ajv-validate: error: ref schema file {dir}/ref-0.json has no $id to register it under"
+        }
+      }
+    },
+    {
+      "name": "a chain of components resolves through both --ref files",
+      "description": "A chain of components: the composite refers to one, which refers to another.",
+      "schema": {
+        "$id": "https://example.org/composite",
+        "allOf": [
+          {
+            "$ref": "https://example.org/middle"
+          }
+        ]
+      },
+      "refs": [
+        {
+          "$id": "https://example.org/middle",
+          "allOf": [
+            {
+              "$ref": "https://example.org/base"
+            }
+          ],
+          "required": [
+            "status"
+          ]
+        },
+        {
+          "$id": "https://example.org/base",
+          "required": [
+            "id"
+          ]
+        }
+      ],
+      "instance": {
+        "status": "final"
+      },
+      "expect": {
+        "exit": 1,
+        "stdout": {
+          "jsonschema-validate": [
+            "INVALID: 'id' is a required property"
+          ],
+          "ajv-validate": [
+            "INVALID: must have required property 'id'"
+          ]
+        }
+      }
+    },
+    {
+      "name": "a registered schema nothing refers to changes no verdict",
+      "schema": {
+        "type": "object",
+        "required": [
+          "id"
+        ]
+      },
+      "refs": [
+        {
+          "$id": "https://example.org/unused",
+          "type": "string"
+        }
+      ],
+      "instance": {
+        "id": "x"
+      },
+      "expect": {
+        "exit": 0,
+        "stdout": [
+          "VALID"
+        ]
+      }
+    },
+    {
+      "name": "a $ref reaches a subschema inside a --ref file by pointer",
+      "description": "A $id on a subschema names that subschema; a $ref can reach it directly.",
+      "schema": {
+        "$id": "https://example.org/composite",
+        "properties": {
+          "tag": {
+            "$ref": "https://example.org/component#/$defs/tag"
+          }
+        }
+      },
+      "refs": [
+        {
+          "$id": "https://example.org/component",
+          "$defs": {
+            "tag": {
+              "type": "string",
+              "pattern": "^[a-z]+$"
+            }
+          }
+        }
+      ],
+      "instance": {
+        "tag": "NOT LOWER"
+      },
+      "expect": {
+        "exit": 1,
+        "stdout": {
+          "jsonschema-validate": [
+            "INVALID: /tag: 'NOT LOWER' does not match '^[a-z]+$'"
+          ],
+          "ajv-validate": [
+            "INVALID: /tag: must match pattern \"^[a-z]+$\""
+          ]
+        }
+      }
+    }
+  ]
+}

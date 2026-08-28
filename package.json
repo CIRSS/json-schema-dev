@@ -1,0 +1,16 @@
+{
+  "name": "json-schema-dev",
+  "version": "0.1.0",
+  "description": "Two JSON Schema validators behind one command-line contract, and the conformance corpus that holds them to it",
+  "scripts": {
+    "test": "mocha tests/*.test.js",
+    "record": "node tests/record-corpus.js",
+    "review": "node tools/review-status.js",
+    "review:md": "node tools/review-status.js --markdown > REVIEW.md"
+  },
+  "author": "Timothy M. McPhillips",
+  "license": "MIT",
+  "devDependencies": {
+    "mocha": "11.7.5"
+  }
+}

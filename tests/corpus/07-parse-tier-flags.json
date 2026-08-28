@@ -1,0 +1,244 @@
+{
+  "group": "checks no schema can make",
+  "description": "Two checks that no schema can ever make, because the parser has already destroyed the evidence by the time a schema sees the instance. Both wrappers implement them independently — the Python leg through a parse hook, the Node leg by scanning the raw text — and are contracted to emit the same lines in the same order.",
+  "cases": [
+    {
+      "name": "without the flag a duplicate member is invisible and the last value wins",
+      "description": "Without the flag, last-value-wins parsing hides the duplicate entirely, and a const on the last value passes.",
+      "schema": {
+        "properties": {
+          "status": {
+            "const": "final"
+          }
+        }
+      },
+      "instanceText": "{\"status\": \"draft\", \"status\": \"final\"}\n",
+      "expect": {
+        "exit": 0,
+        "stdout": [
+          "VALID"
+        ]
+      }
+    },
+    {
+      "name": "with the flag a duplicate member is a verdict about the document",
+      "description": "With the flag, the duplicate is a verdict about the submitted document.",
+      "schema": {
+        "properties": {
+          "status": {
+            "const": "final"
+          }
+        }
+      },
+      "instanceText": "{\"status\": \"draft\", \"status\": \"final\"}\n",
+      "args": [
+        "--reject-duplicate-members"
+      ],
+      "identicalMessages": true,
+      "expect": {
+        "exit": 1,
+        "stdout": [
+          "INVALID: instance contains duplicate member name \"status\""
+        ]
+      }
+    },
+    {
+      "name": "duplicate names are deduplicated and sorted, so both legs agree word for word",
+      "description": "All duplicate names are reported, deduplicated and sorted, so the two legs agree word for word despite visiting objects in different orders.",
+      "schema": {},
+      "instanceText": "{\"b\": 1, \"b\": 2, \"a\": 3, \"a\": 4, \"a\": 5}\n",
+      "args": [
+        "--reject-duplicate-members"
+      ],
+      "identicalMessages": true,
+      "expect": {
+        "exit": 1,
+        "stdout": [
+          "INVALID: instance contains duplicate member name \"a\"",
+          "INVALID: instance contains duplicate member name \"b\""
+        ]
+      }
+    },
+    {
+      "name": "a duplicate at any depth counts",
+      "schema": {},
+      "instanceText": "{\"outer\": {\"inner\": {\"x\": 1, \"x\": 2}}}\n",
+      "args": [
+        "--reject-duplicate-members"
+      ],
+      "identicalMessages": true,
+      "expect": {
+        "exit": 1,
+        "stdout": [
+          "INVALID: instance contains duplicate member name \"x\""
+        ]
+      }
+    },
+    {
+      "name": "a non-ASCII duplicate name prints identically on both legs",
+      "description": "A non-ASCII name must print byte-identically on both legs.",
+      "schema": {},
+      "instanceText": "{\"café\": 1, \"café\": 2}\n",
+      "args": [
+        "--reject-duplicate-members"
+      ],
+      "identicalMessages": true,
+      "expect": {
+        "exit": 1,
+        "stdout": [
+          "INVALID: instance contains duplicate member name \"café\""
+        ]
+      }
+    },
+    {
+      "name": "an escaped name and its literal form are the same member",
+      "description": "Escape sequences are decoded before comparison, so \\u0061 and a are the same member.",
+      "schema": {},
+      "instanceText": "{\"a\": 1, \"\\u0061\": 2}\n",
+      "args": [
+        "--reject-duplicate-members"
+      ],
+      "identicalMessages": true,
+      "expect": {
+        "exit": 1,
+        "stdout": [
+          "INVALID: instance contains duplicate member name \"a\""
+        ]
+      }
+    },
+    {
+      "name": "objects nested in arrays are scanned for duplicates too",
+      "schema": {},
+      "instanceText": "{\"records\": [{\"id\": 1, \"id\": 2}]}\n",
+      "args": [
+        "--reject-duplicate-members"
+      ],
+      "identicalMessages": true,
+      "expect": {
+        "exit": 1,
+        "stdout": [
+          "INVALID: instance contains duplicate member name \"id\""
+        ]
+      }
+    },
+    {
+      "name": "the flag changes nothing when there is nothing to find",
+      "schema": {
+        "type": "object"
+      },
+      "instanceText": "{\"a\": 1, \"b\": 2}\n",
+      "args": [
+        "--reject-duplicate-members"
+      ],
+      "expect": {
+        "exit": 0,
+        "stdout": [
+          "VALID"
+        ]
+      }
+    },
+    {
+      "name": "a schema declaring another version is refused, not reinterpreted",
+      "description": "A schema declaring a version other than 2020-12 is refused rather than silently reinterpreted.",
+      "schema": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "definitions": {
+          "id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "instance": {},
+      "expect": {
+        "exit": 2,
+        "stdout": [],
+        "stderrContains": {
+          "jsonschema-validate": "jsonschema-validate: error: {dir}/schema.json declares JSON Schema version \"http://json-schema.org/draft-07/schema#\"; only 2020-12 is supported (pass --ignore-declared-version to validate it as 2020-12 anyway)",
+          "ajv-validate": "ajv-validate: error: {dir}/schema.json declares JSON Schema version \"http://json-schema.org/draft-07/schema#\"; only 2020-12 is supported (pass --ignore-declared-version to validate it as 2020-12 anyway)"
+        }
+      }
+    },
+    {
+      "name": "the override discards the declaration and validates as 2020-12",
+      "description": "With the override the declaration is discarded and the schema validates as 2020-12 — where draft-07's definitions is an ignored unknown member.",
+      "schema": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "definitions": {
+          "id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "instance": {},
+      "args": [
+        "--ignore-declared-version"
+      ],
+      "expect": {
+        "exit": 1,
+        "stdout": {
+          "jsonschema-validate": [
+            "INVALID: 'id' is a required property"
+          ],
+          "ajv-validate": [
+            "INVALID: must have required property 'id'"
+          ]
+        }
+      }
+    },
+    {
+      "name": "declaring 2020-12 passes through untouched",
+      "schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "required": [
+          "id"
+        ]
+      },
+      "instance": {
+        "id": "x"
+      },
+      "expect": {
+        "exit": 0,
+        "stdout": [
+          "VALID"
+        ]
+      }
+    },
+    {
+      "name": "the version refusal applies to --ref files too",
+      "schema": {
+        "$id": "https://example.org/composite",
+        "allOf": [
+          {
+            "$ref": "https://example.org/component"
+          }
+        ]
+      },
+      "refs": [
+        {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "$id": "https://example.org/component",
+          "required": [
+            "id"
+          ]
+        }
+      ],
+      "instance": {
+        "id": "x"
+      },
+      "expect": {
+        "exit": 2,
+        "stdout": [],
+        "stderrContains": {
+          "jsonschema-validate": "jsonschema-validate: error: {dir}/ref-0.json declares JSON Schema version \"http://json-schema.org/draft-07/schema#\"; only 2020-12 is supported (pass --ignore-declared-version to validate it as 2020-12 anyway)",
+          "ajv-validate": "ajv-validate: error: {dir}/ref-0.json declares JSON Schema version \"http://json-schema.org/draft-07/schema#\"; only 2020-12 is supported (pass --ignore-declared-version to validate it as 2020-12 anyway)"
+        }
+      }
+    }
+  ]
+}

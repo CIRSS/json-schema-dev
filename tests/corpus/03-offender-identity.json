@@ -1,0 +1,163 @@
+{
+  "group": "naming the member at fault",
+  "description": "Several keywords report against a containing object while the thing at fault is one member of it. Ajv carries that member's identity in err.params (missingProperty, additionalProperty, unevaluatedProperty, allowedValues, limit) and the wrapper prints only err.message, discarding it — which is why two extra members produce two identical lines. python-jsonschema puts the specifics in its message prose instead, so the two legs differ in how much they say rather than in what they found.",
+  "cases": [
+    {
+      "name": "two extra members produce one line each from ajv-validate, naming neither",
+      "description": "Two extra members, two failures, one containing object. The offending names are what distinguishes the lines.",
+      "schema": {
+        "properties": {
+          "a": {}
+        },
+        "additionalProperties": false
+      },
+      "instance": {
+        "a": 1,
+        "note": 2,
+        "draft": 3
+      },
+      "defect": {
+        "summary": "ajv-validate emits one failure per offending member while jsonschema-validate aggregates them into a single message, so the legs report different numbers of lines.",
+        "should": "Both legs should report one failure per offending member, each naming the member — which on the Ajv side means using params rather than discarding it.",
+        "divergent": true
+      },
+      "expect": {
+        "exit": 1,
+        "stdout": {
+          "jsonschema-validate": [
+            "INVALID: Additional properties are not allowed ('draft', 'note' were unexpected)"
+          ],
+          "ajv-validate": [
+            "INVALID: must NOT have additional properties",
+            "INVALID: must NOT have additional properties"
+          ]
+        }
+      }
+    },
+    {
+      "name": "two unevaluated members produce one line each from ajv-validate, naming neither",
+      "description": "The same shape as the additionalProperties case, one keyword over.",
+      "schema": {
+        "allOf": [
+          {
+            "properties": {
+              "a": {}
+            }
+          }
+        ],
+        "unevaluatedProperties": false
+      },
+      "instance": {
+        "a": 1,
+        "note": 2,
+        "draft": 3
+      },
+      "defect": {
+        "summary": "ajv-validate emits one failure per offending member while jsonschema-validate aggregates them into a single message, so the legs report different numbers of lines.",
+        "should": "Both legs should report one failure per offending member, each naming the member — which on the Ajv side means using params rather than discarding it.",
+        "divergent": true
+      },
+      "expect": {
+        "exit": 1,
+        "stdout": {
+          "jsonschema-validate": [
+            "INVALID: Unevaluated properties are not allowed ('draft', 'note' were unexpected)"
+          ],
+          "ajv-validate": [
+            "INVALID: must NOT have unevaluated properties",
+            "INVALID: must NOT have unevaluated properties"
+          ]
+        }
+      }
+    },
+    {
+      "name": "two absent required members produce one failure each",
+      "description": "Two required members absent. Ajv names each in params; the Python leg names each in its message.",
+      "schema": {
+        "required": [
+          "a",
+          "b"
+        ]
+      },
+      "instance": {},
+      "expect": {
+        "exit": 1,
+        "stdout": {
+          "jsonschema-validate": [
+            "INVALID: 'a' is a required property",
+            "INVALID: 'b' is a required property"
+          ],
+          "ajv-validate": [
+            "INVALID: must have required property 'a'",
+            "INVALID: must have required property 'b'"
+          ]
+        }
+      }
+    },
+    {
+      "name": "an enum failure names the allowed values only on the Python leg",
+      "description": "Ajv's enum message names no values; the allowed set is in params.allowedValues. The Python leg quotes both the value and the set.",
+      "schema": {
+        "enum": [
+          "draft",
+          "final"
+        ]
+      },
+      "instance": "banana",
+      "defect": {
+        "summary": "ajv-validate's line says only that the value must be one of the allowed values, because params.allowedValues is discarded.",
+        "should": "The line should name the allowed values, as the Python leg's does."
+      },
+      "expect": {
+        "exit": 1,
+        "stdout": {
+          "jsonschema-validate": [
+            "INVALID: 'banana' is not one of ['draft', 'final']"
+          ],
+          "ajv-validate": [
+            "INVALID: must be equal to one of the allowed values"
+          ]
+        }
+      }
+    },
+    {
+      "name": "a maxLength failure names the limit on both legs",
+      "description": "Ajv keeps the limit in params and happens to interpolate it into its message; the Python leg states it in prose.",
+      "schema": {
+        "type": "string",
+        "maxLength": 5
+      },
+      "instance": "far too long",
+      "expect": {
+        "exit": 1,
+        "stdout": {
+          "jsonschema-validate": [
+            "INVALID: 'far too long' is too long"
+          ],
+          "ajv-validate": [
+            "INVALID: must NOT have more than 5 characters"
+          ]
+        }
+      }
+    },
+    {
+      "name": "a type failure names the expected type",
+      "description": "Ajv keeps the expected type in params.type.",
+      "schema": {
+        "type": "object"
+      },
+      "instance": [],
+      "expect": {
+        "exit": 1,
+        "stdout": {
+          "jsonschema-validate": [
+            "INVALID: [] is not of type 'object'"
+          ],
+          "ajv-validate": [
+            "INVALID: must be object"
+          ]
+        }
+      }
+    }
+  ]
+}

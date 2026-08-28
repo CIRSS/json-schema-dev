@@ -1,0 +1,257 @@
+{
+  "group": "where a failure is reported",
+  "description": "Where in the instance a failure is reported. Every failure has a location — the root's is the empty JSON Pointer — and the corpus pins how each one is rendered, including the RFC 6901 escapes and the locations the current rendering cannot distinguish.",
+  "cases": [
+    {
+      "name": "a failure of the whole instance is reported with no location",
+      "description": "The location is the empty JSON Pointer, which both wrappers render by printing nothing.",
+      "schema": {
+        "type": "object"
+      },
+      "instance": 5,
+      "expect": {
+        "exit": 1,
+        "stdout": {
+          "jsonschema-validate": [
+            "INVALID: 5 is not of type 'object'"
+          ],
+          "ajv-validate": [
+            "INVALID: must be object"
+          ]
+        }
+      }
+    },
+    {
+      "name": "a missing top-level member is reported against the root object",
+      "description": "A missing member is reported against the object that lacks it, which for a top-level requirement is the root.",
+      "schema": {
+        "type": "object",
+        "required": [
+          "b"
+        ]
+      },
+      "instance": {
+        "a": 1
+      },
+      "expect": {
+        "exit": 1,
+        "stdout": {
+          "jsonschema-validate": [
+            "INVALID: 'b' is a required property"
+          ],
+          "ajv-validate": [
+            "INVALID: must have required property 'b'"
+          ]
+        }
+      }
+    },
+    {
+      "name": "a failure inside a member is reported at that member's pointer",
+      "description": "A failure inside a member is reported at that member's pointer.",
+      "schema": {
+        "properties": {
+          "creator": {
+            "type": "object",
+            "required": [
+              "id"
+            ]
+          }
+        }
+      },
+      "instance": {
+        "creator": {}
+      },
+      "expect": {
+        "exit": 1,
+        "stdout": {
+          "jsonschema-validate": [
+            "INVALID: /creator: 'id' is a required property"
+          ],
+          "ajv-validate": [
+            "INVALID: /creator: must have required property 'id'"
+          ]
+        }
+      }
+    },
+    {
+      "name": "an array element's location is its index",
+      "schema": {
+        "items": {
+          "type": "number"
+        }
+      },
+      "instance": [
+        1,
+        "x",
+        3
+      ],
+      "expect": {
+        "exit": 1,
+        "stdout": {
+          "jsonschema-validate": [
+            "INVALID: /1: 'x' is not of type 'number'"
+          ],
+          "ajv-validate": [
+            "INVALID: /1: must be number"
+          ]
+        }
+      }
+    },
+    {
+      "name": "locations compose down through objects and arrays alike",
+      "schema": {
+        "properties": {
+          "records": {
+            "items": {
+              "properties": {
+                "id": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "instance": {
+        "records": [
+          {
+            "id": "ok"
+          },
+          {
+            "id": 7
+          }
+        ]
+      },
+      "expect": {
+        "exit": 1,
+        "stdout": {
+          "jsonschema-validate": [
+            "INVALID: /records/1/id: 7 is not of type 'string'"
+          ],
+          "ajv-validate": [
+            "INVALID: /records/1/id: must be string"
+          ]
+        }
+      }
+    },
+    {
+      "name": "the member named \"\" is reported as though the whole instance had failed",
+      "description": "RFC 6901 gives the member named \"\" the pointer \"/\" — a different location from the root, whose pointer is \"\". Both wrappers use \"/\" as their sentinel for the root, so this failure is rendered as though it were a failure of the whole instance.",
+      "schema": {
+        "properties": {
+          "": {
+            "type": "number"
+          }
+        }
+      },
+      "instance": {
+        "": "not a number"
+      },
+      "defect": {
+        "summary": "The member named \"\" is reported as a root failure, because \"/\" is used as the root sentinel.",
+        "should": "The root is the empty pointer and should be represented as a first-class value, not as the string \"/\"; the member named \"\" should render at \"/\" and be distinguishable from it."
+      },
+      "expect": {
+        "exit": 1,
+        "stdout": {
+          "jsonschema-validate": [
+            "INVALID: 'not a number' is not of type 'number'"
+          ],
+          "ajv-validate": [
+            "INVALID: must be number"
+          ]
+        }
+      }
+    },
+    {
+      "name": "a member name containing \"/\" goes unescaped, so its pointer reads as a nested member",
+      "description": "RFC 6901 escapes \"/\" in a member name as \"~1\", so the member \"a/b\" of the root object has the pointer \"/a~1b\" — distinct from the member \"b\" of the member \"a\".",
+      "schema": {
+        "properties": {
+          "a/b": {
+            "type": "number"
+          }
+        }
+      },
+      "instance": {
+        "a/b": "not a number"
+      },
+      "defect": {
+        "summary": "jsonschema-validate joins path segments with \"/\" without escaping, so \"a/b\" renders as \"/a/b\" and is indistinguishable from a nested member. ajv-validate escapes correctly.",
+        "should": "Both legs should render RFC 6901 pointers with ~0 and ~1 escapes, and should therefore agree.",
+        "divergent": true
+      },
+      "expect": {
+        "exit": 1,
+        "stdout": {
+          "jsonschema-validate": [
+            "INVALID: /a/b: 'not a number' is not of type 'number'"
+          ],
+          "ajv-validate": [
+            "INVALID: /a~1b: must be number"
+          ]
+        }
+      }
+    },
+    {
+      "name": "a member name containing \"~\" goes unescaped, so its pointer does not address it",
+      "description": "RFC 6901 escapes \"~\" in a member name as \"~0\".",
+      "schema": {
+        "properties": {
+          "a~b": {
+            "type": "number"
+          }
+        }
+      },
+      "instance": {
+        "a~b": "not a number"
+      },
+      "defect": {
+        "summary": "jsonschema-validate does not escape \"~\", so the rendered pointer is not a valid JSON Pointer for this member.",
+        "should": "Both legs should render RFC 6901 pointers with ~0 and ~1 escapes, and should therefore agree.",
+        "divergent": true
+      },
+      "expect": {
+        "exit": 1,
+        "stdout": {
+          "jsonschema-validate": [
+            "INVALID: /a~b: 'not a number' is not of type 'number'"
+          ],
+          "ajv-validate": [
+            "INVALID: /a~0b: must be number"
+          ]
+        }
+      }
+    },
+    {
+      "name": "each failure gets its own line and its own location",
+      "schema": {
+        "properties": {
+          "a": {
+            "type": "number"
+          },
+          "b": {
+            "type": "number"
+          }
+        }
+      },
+      "instance": {
+        "a": "x",
+        "b": "y"
+      },
+      "expect": {
+        "exit": 1,
+        "stdout": {
+          "jsonschema-validate": [
+            "INVALID: /a: 'x' is not of type 'number'",
+            "INVALID: /b: 'y' is not of type 'number'"
+          ],
+          "ajv-validate": [
+            "INVALID: /a: must be number",
+            "INVALID: /b: must be number"
+          ]
+        }
+      }
+    }
+  ]
+}

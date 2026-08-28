@@ -10,6 +10,8 @@ RUN bash /repro/dist/boot-setup
 
 USER repro
 
-RUN repro.require json-schema-dev exports
+RUN repro.require json-schema-dev exports --code
+
+RUN sudo npm install -g 'mocha@11.7.5'
 
 CMD  /bin/bash -il

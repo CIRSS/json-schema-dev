@@ -1,0 +1,4 @@
+# The conformance suite runs from the repository root, where package.json
+# and the Mocha configuration live.
+test:
+	cd ${REPRO_MNT} && npm test
