@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cirss.github.io/json-schema-dev/review-manifest.schema.json",
+  "title": "The repository review manifest",
+  "description": "One entry per file, recording where the file came from and who has read it. Facts only -- paths, enum values, names, dates, hashes -- and no free-form text. Whether a file's current version has been reviewed is not stored; it is derived by comparing hashes when the report is run.",
+
+  "type": "object",
+  "required": ["files"],
+  "properties": {
+    "files": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/entry" }
+    }
+  },
+  "additionalProperties": false,
+
+  "$defs": {
+    "entry": {
+      "type": "object",
+      "title": "One file",
+      "required": ["path", "origin", "reviews"],
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Repository-relative path, as git reports it.",
+          "minLength": 1
+        },
+        "origin": {
+          "description": "How the file's content came to exist, insofar as it changes what reviewing the file means. A file a person writes is authored even where a tool fills parts of it in.",
+          "oneOf": [
+            {
+              "const": "authored",
+              "title": "authored",
+              "description": "Written deliberately, by a person or an agent, as prose or code."
+            },
+            {
+              "const": "generated",
+              "title": "generated",
+              "description": "Produced by a tool from other inputs. Review the generator, not the output."
+            },
+            {
+              "const": "framework",
+              "title": "framework",
+              "description": "Supplied by the REPRO framework or a project template and carried unmodified. Not this repository's to review."
+            }
+          ]
+        },
+        "generatedBy": {
+          "type": "string",
+          "description": "Repository-relative path of what produces this file.",
+          "minLength": 1
+        },
+        "authoredBy": {
+          "description": "Who wrote it, where that is known. \"unknown\" means the record was never kept, not that nobody wrote it.",
+          "enum": ["tim", "agent", "both", "unknown"]
+        },
+        "reviews": {
+          "type": "array",
+          "description": "Every recorded human reading of this file, oldest first. Empty means no review has been recorded, which is not the same as nobody having read it.",
+          "items": { "$ref": "#/$defs/review" }
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "review": {
+      "type": "object",
+      "title": "One person having read one version of the file",
+      "required": ["by", "date", "hash"],
+      "properties": {
+        "by": {
+          "type": "string",
+          "description": "The person who read it. A name, never a role and never an agent.",
+          "minLength": 1
+        },
+        "date": {
+          "type": "string",
+          "description": "The date of the review, ISO 8601.",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+        },
+        "hash": {
+          "type": "string",
+          "description": "The git blob hash of the content that was read, from `git hash-object <file>`. The current version has been reviewed exactly when its hash appears here.",
+          "pattern": "^[0-9a-f]{40}$"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

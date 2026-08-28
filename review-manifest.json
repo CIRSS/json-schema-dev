@@ -1,0 +1,233 @@
+{
+  "files": [
+    {
+      "path": ".editorconfig",
+      "origin": "framework",
+      "authoredBy": "unknown",
+      "reviews": []
+    },
+    {
+      "path": ".gitignore",
+      "origin": "authored",
+      "authoredBy": "both",
+      "reviews": []
+    },
+    {
+      "path": "CONTRACT.md",
+      "origin": "authored",
+      "authoredBy": "agent",
+      "reviews": []
+    },
+    {
+      "path": "Dockerfile",
+      "origin": "authored",
+      "authoredBy": "agent",
+      "reviews": [
+        {
+          "by": "Tim McPhillips",
+          "date": "2026-08-26",
+          "hash": "186f56a69c45840249a81354f5a8cd9d59aefdbe"
+        }
+      ]
+    },
+    {
+      "path": "Dockerfile-parent",
+      "origin": "authored",
+      "authoredBy": "unknown",
+      "reviews": []
+    },
+    {
+      "path": "Makefile",
+      "origin": "framework",
+      "authoredBy": "unknown",
+      "reviews": []
+    },
+    {
+      "path": "Makefile-tests",
+      "origin": "framework",
+      "authoredBy": "unknown",
+      "reviews": []
+    },
+    {
+      "path": "README.md",
+      "origin": "authored",
+      "authoredBy": "agent",
+      "reviews": [
+        {
+          "by": "Tim McPhillips",
+          "date": "2026-08-26",
+          "hash": "7a7f5c073689619737a076b43c8514dbb0153e6d"
+        }
+      ]
+    },
+    {
+      "path": "REVIEW.md",
+      "origin": "generated",
+      "generatedBy": "tools/review-status.js",
+      "authoredBy": "agent",
+      "reviews": []
+    },
+    {
+      "path": "exports/ajv-validate",
+      "origin": "authored",
+      "authoredBy": "agent",
+      "reviews": []
+    },
+    {
+      "path": "exports/base-manifest",
+      "origin": "authored",
+      "authoredBy": "unknown",
+      "reviews": []
+    },
+    {
+      "path": "exports/base-setup",
+      "origin": "authored",
+      "authoredBy": "unknown",
+      "reviews": []
+    },
+    {
+      "path": "exports/code-makefile",
+      "origin": "authored",
+      "authoredBy": "agent",
+      "reviews": []
+    },
+    {
+      "path": "exports/code-manifest",
+      "origin": "authored",
+      "authoredBy": "agent",
+      "reviews": []
+    },
+    {
+      "path": "exports/code-targets",
+      "origin": "authored",
+      "authoredBy": "agent",
+      "reviews": []
+    },
+    {
+      "path": "exports/jsonschema-validate",
+      "origin": "authored",
+      "authoredBy": "agent",
+      "reviews": []
+    },
+    {
+      "path": "exports/readme.txt",
+      "origin": "authored",
+      "authoredBy": "both",
+      "reviews": []
+    },
+    {
+      "path": "package.json",
+      "origin": "authored",
+      "authoredBy": "agent",
+      "reviews": []
+    },
+    {
+      "path": "repro-config",
+      "origin": "authored",
+      "authoredBy": "unknown",
+      "reviews": []
+    },
+    {
+      "path": "review-manifest.json",
+      "origin": "authored",
+      "authoredBy": "agent",
+      "reviews": []
+    },
+    {
+      "path": "tests/README.md",
+      "origin": "authored",
+      "authoredBy": "agent",
+      "reviews": []
+    },
+    {
+      "path": "tests/conformance.test.js",
+      "origin": "authored",
+      "authoredBy": "agent",
+      "reviews": []
+    },
+    {
+      "path": "tests/corpus-case.js",
+      "origin": "authored",
+      "authoredBy": "agent",
+      "reviews": []
+    },
+    {
+      "path": "tests/corpus-schema.json",
+      "origin": "authored",
+      "authoredBy": "agent",
+      "reviews": []
+    },
+    {
+      "path": "tests/corpus-schema.test.js",
+      "origin": "authored",
+      "authoredBy": "agent",
+      "reviews": []
+    },
+    {
+      "path": "tests/corpus/01-location-rendering.json",
+      "origin": "authored",
+      "authoredBy": "agent",
+      "reviews": []
+    },
+    {
+      "path": "tests/corpus/02-sub-result-nesting.json",
+      "origin": "authored",
+      "authoredBy": "agent",
+      "reviews": []
+    },
+    {
+      "path": "tests/corpus/03-offender-identity.json",
+      "origin": "authored",
+      "authoredBy": "agent",
+      "reviews": []
+    },
+    {
+      "path": "tests/corpus/04-exit-codes.json",
+      "origin": "authored",
+      "authoredBy": "agent",
+      "reviews": []
+    },
+    {
+      "path": "tests/corpus/05-error-message.json",
+      "origin": "authored",
+      "authoredBy": "agent",
+      "reviews": []
+    },
+    {
+      "path": "tests/corpus/06-ref-registration.json",
+      "origin": "authored",
+      "authoredBy": "agent",
+      "reviews": []
+    },
+    {
+      "path": "tests/corpus/07-parse-tier-flags.json",
+      "origin": "authored",
+      "authoredBy": "agent",
+      "reviews": []
+    },
+    {
+      "path": "tests/record-corpus.js",
+      "origin": "authored",
+      "authoredBy": "agent",
+      "reviews": []
+    },
+    {
+      "path": "tests/review-manifest.schema.json",
+      "origin": "authored",
+      "authoredBy": "agent",
+      "reviews": []
+    },
+    {
+      "path": "tests/review-manifest.test.js",
+      "origin": "authored",
+      "authoredBy": "agent",
+      "reviews": []
+    },
+    {
+      "path": "tools/review-status.js",
+      "origin": "authored",
+      "authoredBy": "agent",
+      "reviews": []
+    }
+  ]
+}
