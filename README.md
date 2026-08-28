@@ -25,9 +25,19 @@ Each command writes its verdict to stdout — `VALID`, or one `INVALID: <error>`
 
 Both commands are exported as artifacts of this module, so they are on `PATH` inside this REPRO **and** inside any REPRO that composes it with `repro.require json-schema-dev …` — the module's capability is the uniform cross-validator CLI, not just the two libraries.
 
-## Tests
+## The contract, and the tests
 
-The wrappers do not yet have a test suite. `Makefile-tests` exercises the REPRO lifecycle, not the validator contract. Building one — a language-neutral fixture corpus of `(schema, instance, flags)` cases mapped to expected exit code and output, run against both implementations, with cross-implementation agreement asserted mechanically — is the reason this module was separated from the gallery.
+The two wrappers are two implementations of one command-line contract, and the contract — not either CLI — is what this module delivers. It is stated in [`CONTRACT.md`](CONTRACT.md): the exit-status rule that everything about the instance is a verdict and everything else is an error, what the two implementations must agree about and what is left to the underlying library, the `--ref`, `errorMessage`, and parse-tier behaviors, and a table of the defects currently known.
+
+[`tests/`](tests/README.md) holds the conformance corpus that puts the contract to both implementations: language-neutral cases, as JSON, run through each wrapper by a Mocha suite and checked both against their recorded behavior and against each other. Expectations are *recorded* from real runs rather than written from belief, and behavior known to be wrong is pinned by a case whose defect summary becomes a test name — so the defect inventory lives in the test report and cannot drift from the cases that demonstrate it.
+
+```
+make test-code       # start a session and run the suite in the image
+```
+
+Inside a started REPRO it is plain Mocha (`npm test`, `npm test -- --grep <case>`). Not on the host: the wrappers live in the image, so that is where anything exercising them runs.
+
+(`Makefile-tests` is separate and older: it exercises the REPRO lifecycle, not the validator contract.)
 
 ## Build
 
@@ -36,4 +46,5 @@ The parent image adds Python (via `apt`) and a pinned Node (official prebuilt bi
 ```
 make build-parent     # framework base + Python + Node (one-time, slow layer)
 make build-image      # install the two libraries and export the wrappers
+make test-code        # run the conformance suite
 ```
