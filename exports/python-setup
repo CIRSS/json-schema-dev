@@ -1,0 +1,6 @@
+# python3 and pip come from the consuming REPRO's parent image.
+python3 -m pip install --user 'jsonschema==4.23.0'
+
+# jsonschema-validate lands in the module install dir, which is already on PATH
+# for this REPRO and for any REPRO that requires this profile; just ensure it runs.
+chmod +x "$1/jsonschema-validate"
