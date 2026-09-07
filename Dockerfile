@@ -10,7 +10,9 @@ RUN bash /repro/dist/boot-setup
 
 USER repro
 
-RUN repro.require json-schema-dev exports --code
+RUN repro.require json-schema-dev exports --python --javascript --code
+
+RUN repro.require review-ledger main ${CIRSS} --report
 
 RUN sudo npm install -g 'mocha@11.7.5'
 

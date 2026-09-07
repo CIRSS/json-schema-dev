@@ -14,3 +14,13 @@ image:                  build-image   ##
 start:                  start-repro   ##
 
 ##
+
+-include .review-ledger/host-makefile
+
+# Local stand-in until this target lives in review-ledger/host-makefile.
+# Calls that module's own review recipe in the trim directory: the REPRO
+# target mapping is baked into the image and cannot be extended here.
+.PHONY: update-reviews
+## update-reviews:    Update REVIEWS.md without running the other reports.
+update-reviews: session
+	$(RUN_IN_REPRO) 'make -C ${REPRO_MNT}/.review-ledger -f report-makefile review'
