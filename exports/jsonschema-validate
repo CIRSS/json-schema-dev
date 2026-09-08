@@ -4,6 +4,7 @@
 Usage: jsonschema-validate --schema FILE --instance FILE [--ref FILE]...
                            [--reject-duplicate-members]
                            [--ignore-declared-version]
+                           [--text FILE|-] [--json FILE|-]
 
 Arguments are named, not positional, so the schema and instance cannot be
 swapped by accident. The 2020-12 dialect is forced regardless of the schema's
@@ -20,8 +21,13 @@ other than 2020-12 is refused (exit 2): validating it under 2020-12
 semantics could silently change its meaning. --ignore-declared-version
 overrides the refusal by discarding the declaration and validating as
 2020-12 anyway -- an explicit choice, never a silent one.
-The verdict is written to stdout as `VALID` or one `INVALID: ...` line per
-error; diagnostics go to stderr. Exit status:
+The verdict has two forms, and a run may ask for either or both: --text
+writes the lines a caller has always got, `VALID` or one `INVALID: ...` per
+error, and --json writes a report carrying each finding's location as
+segments, the keyword that failed, where that keyword lives, and the
+identity of what offended. Either takes a file, or - for stdout; passing
+neither writes the text form to stdout. Diagnostics go to stderr. Exit
+status:
 
     0  the instance is valid
     1  the instance is invalid -- including an instance file that is not
@@ -32,11 +38,13 @@ error; diagnostics go to stderr. Exit status:
        without $id)
 """
 import argparse
+import collections
 import json
 import re
 import sys
 
 from jsonschema import Draft202012Validator
+from jsonschema._utils import find_evaluated_property_keys_by_schema
 from jsonschema.exceptions import SchemaError, _WrappedReferencingError
 from referencing import Registry, Resource
 from referencing.jsonschema import DRAFT202012
@@ -44,6 +52,9 @@ from referencing.jsonschema import DRAFT202012
 PROG = "jsonschema-validate"
 EXIT_VALID, EXIT_INVALID, EXIT_ERROR = 0, 1, 2
 SUPPORTED_VERSION_URI = "https://json-schema.org/draft/2020-12/schema"
+# A $ref chain longer than this is a cycle, and a location is not worth
+# hanging for.
+MAX_REF_DEPTH = 32
 
 
 def die(message):
@@ -138,15 +149,19 @@ def parse_instance(text, reject_duplicates):
         instance = json.loads(
             text, object_pairs_hook=note_duplicates if reject_duplicates else None)
     except json.JSONDecodeError as e:
-        print(f"INVALID: instance is not valid JSON: {e}")
-        sys.exit(EXIT_INVALID)
+        return None, [{"path": [], "keyword": "parse", "params": {},
+                       "message": f"instance is not valid JSON: {e}"}]
     if duplicates:
-        for name in sorted(duplicates):
-            # ensure_ascii=False so a non-ASCII name prints byte-identically
-            # with ajv-validate's JSON.stringify, keeping the line cross-validated.
-            print(f"INVALID: instance contains duplicate member name {json.dumps(name, ensure_ascii=False)}")
-        sys.exit(EXIT_INVALID)
-    return instance
+        # ensure_ascii=False so a non-ASCII name prints byte-identically with
+        # ajv-validate's JSON.stringify, keeping the line cross-validated.
+        return instance, [
+            {"path": [], "keyword": "duplicateMember",
+             "params": {"memberName": name},
+             "message": "instance contains duplicate member name "
+                        f"{json.dumps(name, ensure_ascii=False)}"}
+            for name in sorted(duplicates)
+        ]
+    return instance, []
 
 
 def location(error):
@@ -249,6 +264,278 @@ def interpolate(message, instance, error_path):
     return re.sub(r"\$\{([^}]*)\}", replace, message)
 
 
+# Keywords whose failure states that some subschema failed, rather than
+# stating anything about the instance. python-jsonschema does not report
+# most of them at all -- it descends and yields the inner failure -- so this
+# set exists to keep the two legs describing one thing, and is checked here
+# for the few it can report.
+TRANSPARENT_KEYWORDS = frozenset({
+    "if", "then", "else", "$ref", "properties", "patternProperties",
+    "additionalProperties", "unevaluatedProperties", "propertyNames",
+    "items", "prefixItems", "allOf", "dependentSchemas", "unevaluatedItems",
+})
+
+# The two keywords above that are assertions rather than applicators when
+# their value is false: each rejects members, and each gets one finding per
+# member rejected, located at it.
+MEMBER_REJECTING = frozenset({"additionalProperties", "unevaluatedProperties"})
+PARAM_FOR_MEMBER = {"additionalProperties": "additionalProperty",
+                    "unevaluatedProperties": "unevaluatedProperty"}
+
+# Keywords whose failure is a conclusion about subschemas that were tried,
+# with the reasons underneath it. These do carry a finding: the reasons are
+# the only place the detail exists.
+BRANCHING_KEYWORDS = frozenset({"anyOf", "oneOf", "contains", "not"})
+
+# Keywords whose "params" is the keyword's own value under a canonical name.
+# Ajv reports these natively; here validator_value carries the same fact.
+VALUE_PARAM = {
+    "enum": "allowedValues",
+    "const": "allowedValue",
+    "type": "type",
+    "pattern": "pattern",
+    "multipleOf": "multipleOf",
+    "maxLength": "limit", "minLength": "limit",
+    "maximum": "limit", "minimum": "limit",
+    "exclusiveMaximum": "limit", "exclusiveMinimum": "limit",
+    "maxItems": "limit", "minItems": "limit",
+    "maxProperties": "limit", "minProperties": "limit",
+}
+
+
+def offender_params(error, seen):
+    """The identity of what actually offended, as fields rather than prose.
+
+    Ajv carries this in err.params; python-jsonschema carries none of it, so
+    it is recomputed here from the failing value and the keyword's own value.
+    The report has to identify the source of an error unambiguously, and a
+    message naming the offender in prose does not.
+
+    `seen` counts errors already emitted for one keyword at one location, so
+    that "required" -- which yields one indistinguishable error per missing
+    member -- can be paired with the missing members in the order the library
+    yields them.
+    """
+    keyword, value = error.validator, error.validator_value
+    if keyword in VALUE_PARAM:
+        return {VALUE_PARAM[keyword]: value}
+    if keyword == "required" and isinstance(error.instance, dict):
+        # Keyed by where the keyword is as well as where the instance is: two
+        # "required" keywords under one allOf fail at the same location, and
+        # counting them together pairs the second with the first one's list.
+        missing = [name for name in value if name not in error.instance]
+        key = (tuple(error.absolute_path), tuple(error.absolute_schema_path))
+        index = seen[key]
+        seen[key] += 1
+        if index < len(missing):
+            return {"missingProperty": missing[index]}
+        return {}
+    if keyword == "uniqueItems" and isinstance(error.instance, list):
+        for j, earlier in enumerate(error.instance):
+            for i in range(j + 1, len(error.instance)):
+                if error.instance[i] == earlier:
+                    return {"i": i, "j": j}
+        return {}
+    if keyword == "oneOf":
+        return {"passingSchemas": passing_schemas(error)}
+    if keyword == "contains":
+        return {"minContains": error.schema.get("minContains", 1)
+                if isinstance(error.schema, dict) else 1}
+    return {}
+
+
+def passing_schemas(error):
+    """Which oneOf branches matched, for a failure of matching more than one.
+
+    A oneOf that failed because nothing matched has no passing branches, and
+    the library says so by giving the error a context; one that failed
+    because several matched has no context, and the branches have to be
+    found by trying them.
+    """
+    if error.context:
+        return None
+    branches = error.validator_value
+    passing = [index for index, branch in enumerate(branches)
+               if Draft202012Validator(branch).is_valid(error.instance)]
+    return passing or None
+
+
+def extra_members(error, validator):
+    """The members an "additionalProperties" or "unevaluatedProperties"
+    false actually rejected.
+
+    Reported as one finding per member, located at the member, where both
+    libraries report at the parent -- Ajv once per member, python once for
+    all of them. Neither locates the member it is talking about.
+
+    Which members count as unevaluated is not something a reader of the
+    schema can work out, since it depends on what every applicator alongside
+    the keyword annotated; the library computes it to raise the error at all,
+    and the same computation is used here rather than a second guess at it.
+    """
+    if error.validator_value is not False or not isinstance(error.instance, dict):
+        return None
+    if not isinstance(error.schema, dict):
+        return None
+    if error.validator == "unevaluatedProperties":
+        try:
+            evaluated = find_evaluated_property_keys_by_schema(
+                validator, error.instance, error.schema)
+        except Exception:
+            return None
+        return [name for name in error.instance if name not in evaluated]
+    declared = error.schema.get("properties", {})
+    patterns = error.schema.get("patternProperties", {})
+    return [name for name in error.instance
+            if name not in declared
+            and not any(re.search(p, name) for p in patterns)]
+
+
+def pointer_segments(document, pointer):
+    """A JSON Pointer into a schema document, as typed segments.
+
+    Typed the same way an instance path is: standing on an array makes the
+    segment an index, standing on an object makes it a member name. A schema
+    has both -- "anyOf/0" indexes a list where "properties/anyOf" would name
+    a member -- so a rendered pointer is no less ambiguous here than it is
+    over an instance.
+    """
+    segments, node = [], document
+    for raw in pointer.split("/")[1:] if pointer else []:
+        token = raw.replace("~1", "/").replace("~0", "~")
+        segment = int(token) if isinstance(node, list) else token
+        segments.append(segment)
+        node = node[segment]
+    return segments
+
+
+def rule_location(error, schema, registry):
+    """Where the failing keyword lives, as a resource and a path into it.
+
+    A finding has to be traceable to the rule that produced it, and the
+    library does not report one: python-jsonschema follows a $ref without
+    recording it, so absolute_schema_path names the referring member and
+    stops there -- for a keyword inside a definition applied by reference it
+    describes a place the keyword is not. The route is walked here instead,
+    resolving a $ref wherever the path continues into something the current
+    node does not contain, so what comes back is where the keyword actually
+    sits. `resource` is None for the schema given on the command line, and
+    the $id of the --ref file otherwise.
+    """
+    document, resource, segments, node = schema, None, [], schema
+    for segment in error.absolute_schema_path:
+        depth = 0
+        while (isinstance(node, dict) and "$ref" in node
+               and segment not in node and depth < MAX_REF_DEPTH):
+            uri, _, pointer = node["$ref"].partition("#")
+            if uri:
+                try:
+                    document = registry.contents(uri)
+                except Exception:
+                    return {"resource": resource, "path": segments}
+                resource = uri
+            try:
+                segments = pointer_segments(document, pointer)
+            except (KeyError, IndexError, TypeError, ValueError):
+                return {"resource": resource, "path": segments}
+            node = document
+            for step in segments:
+                node = node[step]
+            depth += 1
+        try:
+            node = node[segment]
+        except (KeyError, IndexError, TypeError):
+            return {"resource": resource, "path": segments}
+        segments = segments + [segment]
+    return {"resource": resource, "path": segments}
+
+
+def prefix_paths(findings, instance_prefix, rule_prefix):
+    """Re-root findings computed against a subschema in their own right.
+
+    A recomputed cause knows where it sits inside the subschema it was
+    checked against, and nothing about where that subschema sits. Both of
+    its locations therefore need the enclosing keyword's own locations in
+    front of them.
+    """
+    for finding in findings:
+        finding["path"] = list(instance_prefix) + finding["path"]
+        finding["rule"]["path"] = list(rule_prefix) + finding["rule"]["path"]
+        prefix_paths(finding.get("causes", []), instance_prefix, rule_prefix)
+    return findings
+
+
+def contains_causes(error, validator, schema, instance, registry):
+    """Why each element failed the schema "contains" asked for.
+
+    python-jsonschema gives a contains failure no context: it counts matches
+    and reports the count, so the reasons the elements did not match are
+    never built. They are the only place that detail exists, so they are
+    recomputed here -- by evolving the root validator, which keeps the
+    resolution scope, so a $ref inside the subschema still resolves against
+    the document it was written in.
+    """
+    if not isinstance(error.instance, list):
+        return []
+    subschema = validator.evolve(schema=error.validator_value)
+    rule = rule_location(error, schema, registry)["path"]
+    causes = []
+    for index, item in enumerate(error.instance):
+        causes.extend(prefix_paths(
+            findings_from(sorted(subschema.iter_errors(item),
+                                 key=lambda e: list(e.absolute_path)),
+                          error.validator_value, instance, subschema, registry),
+            list(error.absolute_path) + [index], rule))
+    return causes
+
+
+def finding_from(error, schema, instance, seen, validator, registry):
+    """One finding, with the reasons behind it where a keyword has any."""
+    message = custom_message(error, schema)
+    finding = {
+        "path": list(error.absolute_path),
+        "keyword": error.validator,
+        "rule": rule_location(error, schema, registry),
+        "params": offender_params(error, seen),
+        "message": (interpolate(message, instance, error.absolute_path)
+                    if message else error.message),
+    }
+    if error.validator in BRANCHING_KEYWORDS:
+        causes = (contains_causes(error, validator, schema, instance, registry)
+                  if error.validator == "contains"
+                  else findings_from(error.context or [], schema, instance,
+                                     validator, registry))
+        if causes:
+            finding["causes"] = causes
+    return finding
+
+
+def findings_from(errors, schema, instance, validator, registry):
+    """The findings for a list of errors, innermost detail nested.
+
+    A transparent applicator contributes nothing: its conclusion repeats a
+    location already reported. "additionalProperties": false contributes one
+    finding per rejected member rather than one naming several.
+    """
+    seen = collections.Counter()
+    findings = []
+    for error in errors:
+        if error.validator in TRANSPARENT_KEYWORDS:
+            extras = (extra_members(error, validator)
+                      if error.validator in MEMBER_REJECTING else None)
+            for name in extras or []:
+                findings.append({
+                    "path": list(error.absolute_path) + [name],
+                    "keyword": error.validator,
+                    "rule": rule_location(error, schema, registry),
+                    "params": {PARAM_FOR_MEMBER[error.validator]: name},
+                    "message": error.message,
+                })
+            continue
+        findings.append(finding_from(error, schema, instance, seen, validator, registry))
+    return findings
+
+
 def parse_args(argv):
     # argparse exits 0 on --help and 2 on a bad invocation, matching the
     # exit-status contract above.
@@ -269,7 +556,19 @@ def parse_args(argv):
     parser.add_argument("--ignore-declared-version", action="store_true",
                         help="discard a schema's declared JSON Schema "
                              "version and validate as 2020-12 anyway")
-    return parser.parse_args(argv[1:])
+    parser.add_argument("--text", metavar="FILE",
+                        help="write the verdict lines to FILE, or to stdout "
+                             "for -; the default when neither --text nor "
+                             "--json is given")
+    parser.add_argument("--json", metavar="FILE",
+                        help="write the verdict as a JSON report to FILE, or "
+                             "to stdout for -")
+    args = parser.parse_args(argv[1:])
+    if args.text == "-" and args.json == "-":
+        die("--text and --json cannot both write to stdout")
+    if args.text is None and args.json is None:
+        args.text = "-"
+    return args
 
 
 def load_ref_resources(paths, ignore_declared):
@@ -286,6 +585,47 @@ def load_ref_resources(paths, ignore_declared):
     return resources
 
 
+def verdict_lines(errors, schema, instance):
+    """The text form: one line per error, exactly as the library reported it.
+
+    Built from the errors rather than from the findings, so that the text a
+    caller has always got is unaffected by anything the JSON form decides.
+    The two forms answer different questions -- what each library said, and
+    what the two of them agree happened.
+    """
+    lines = []
+    for error in errors:
+        loc = location(error)
+        declared = custom_message(error, schema)
+        message = (interpolate(declared, instance, error.absolute_path)
+                   if declared else error.message)
+        lines.append(f"INVALID: {message}" if loc == "/"
+                     else f"INVALID: {loc}: {message}")
+    return lines
+
+
+def write_output(destination, text):
+    if destination == "-":
+        sys.stdout.write(text)
+        return
+    try:
+        with open(destination, "w") as f:
+            f.write(text)
+    except OSError as e:
+        die(f"cannot write {destination}: {e.strerror}")
+
+
+def emit(args, valid, lines, findings):
+    if args.text:
+        write_output(args.text, "".join(f"{line}\n"
+                                        for line in (["VALID"] if valid else lines)))
+    if args.json:
+        report = {"valid": valid, "findings": findings}
+        write_output(args.json,
+                     json.dumps(report, indent=2, ensure_ascii=False) + "\n")
+    return EXIT_VALID if valid else EXIT_INVALID
+
+
 def main(argv):
     args = parse_args(argv)
     schema = load_json(args.schema, "schema")
@@ -299,27 +639,27 @@ def main(argv):
     except SchemaError as e:
         die(f"{args.schema} is not a valid JSON Schema: {e.message}")
 
-    instance = parse_instance(instance_text, args.reject_duplicate_members)
+    instance, parse_verdicts = parse_instance(instance_text,
+                                              args.reject_duplicate_members)
+    if parse_verdicts:
+        return emit(args, False,
+                    [f"INVALID: {v['message']}" for v in parse_verdicts],
+                    parse_verdicts)
 
     # $ref targets are resolved lazily, during validation rather than by
     # check_schema, so an unresolvable one surfaces here and must be reported
     # as an error (exit 2) rather than as an invalid instance.
+    validator = Draft202012Validator(schema, registry=registry)
     try:
-        errors = sorted(
-            Draft202012Validator(schema, registry=registry).iter_errors(instance),
-            key=lambda e: list(e.absolute_path),
-        )
+        errors = sorted(validator.iter_errors(instance),
+                        key=lambda e: list(e.absolute_path))
     except _WrappedReferencingError as e:
         die(f"{args.schema} contains an unresolvable $ref: {e}")
     if not errors:
-        print("VALID")
-        return EXIT_VALID
-    for e in errors:
-        loc = location(e)
-        declared = custom_message(e, schema)
-        message = interpolate(declared, instance, e.absolute_path) if declared else e.message
-        print(f"INVALID: {message}" if loc == "/" else f"INVALID: {loc}: {message}")
-    return EXIT_INVALID
+        return emit(args, True, [], [])
+    return emit(args, False,
+                verdict_lines(errors, schema, instance),
+                findings_from(errors, schema, instance, validator, registry))
 
 
 if __name__ == "__main__":

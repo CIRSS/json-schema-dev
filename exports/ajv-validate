@@ -4,6 +4,7 @@
 // Usage: ajv-validate --schema FILE --instance FILE [--ref FILE]...
 //                     [--reject-duplicate-members]
 //                     [--ignore-declared-version]
+//                     [--text FILE|-] [--json FILE|-]
 //
 // Arguments are named, not positional, so the schema and instance cannot be
 // swapped by accident. Uses Ajv's 2020-12 build so the verdict is directly
@@ -19,9 +20,13 @@
 // 2020-12 is refused (exit 2): validating it under 2020-12 semantics could
 // silently change its meaning. --ignore-declared-version overrides the
 // refusal by discarding the declaration and validating as 2020-12 anyway --
-// an explicit choice, never a silent one. The verdict is written to stdout
-// as `VALID` or one `INVALID: ...` line per error; diagnostics go to
-// stderr. Exit status:
+// an explicit choice, never a silent one. The verdict has two forms, and a
+// run may ask for either or both: --text writes the lines a caller has
+// always got, `VALID` or one `INVALID: ...` per error, and --json writes a
+// report carrying each finding's location as segments, the keyword that
+// failed, where that keyword lives, and the identity of what offended.
+// Either takes a file, or - for stdout; passing neither writes the text
+// form to stdout. Diagnostics go to stderr. Exit status:
 //
 //     0  the instance is valid
 //     1  the instance is invalid -- including an instance file that is not
@@ -39,7 +44,7 @@ const ajvErrorsModule = require('ajv-errors');
 const ajvErrors = ajvErrorsModule.default || ajvErrorsModule;
 
 const PROG = 'ajv-validate';
-const USAGE = `usage: ${PROG} --schema FILE --instance FILE [--ref FILE]... [--reject-duplicate-members] [--ignore-declared-version]`;
+const USAGE = `usage: ${PROG} --schema FILE --instance FILE [--ref FILE]... [--reject-duplicate-members] [--ignore-declared-version] [--text FILE|-] [--json FILE|-]`;
 const EXIT_VALID = 0;
 const EXIT_INVALID = 1;
 const EXIT_ERROR = 2;
@@ -80,6 +85,8 @@ function parseCli() {
         ref: { type: 'string', short: 'r', multiple: true },
         'reject-duplicate-members': { type: 'boolean' },
         'ignore-declared-version': { type: 'boolean' },
+        text: { type: 'string' },
+        json: { type: 'string' },
         help: { type: 'boolean', short: 'h' },
       },
       allowPositionals: false,
@@ -96,7 +103,171 @@ function parseCli() {
     process.stderr.write(`${PROG}: error: both --schema and --instance are required\n${USAGE}\n`);
     process.exit(EXIT_ERROR);
   }
+  if (values.text === '-' && values.json === '-') {
+    die('--text and --json cannot both write to stdout');
+  }
+  if (values.text === undefined && values.json === undefined) values.text = '-';
   return values;
+}
+
+// Keywords whose failure states that some subschema failed rather than
+// stating anything about the instance. Ajv reports a conclusion for these
+// beside the failure inside them; python-jsonschema descends and reports
+// only the failure. Dropping them is what makes the two legs describe one
+// thing -- and the line they contribute, "must match \"then\" schema",
+// names a keyword rather than a problem.
+const TRANSPARENT_KEYWORDS = new Set([
+  'if', 'then', 'else', '$ref', 'properties', 'patternProperties',
+  'propertyNames', 'items', 'prefixItems', 'allOf', 'dependentSchemas',
+  'unevaluatedItems',
+]);
+
+// Keywords whose failure is a conclusion about subschemas that were tried,
+// with the reasons underneath it. Unlike a transparent conclusion, this one
+// is a finding: the reasons are the only place the detail exists.
+const BRANCHING_KEYWORDS = new Set(['anyOf', 'oneOf', 'contains', 'not']);
+
+// Ajv reports a location as a rendered JSON Pointer, in which "/0" is
+// produced both by an array's first element and by a member named "0". The
+// string cannot carry the difference, so it is recovered by walking the
+// instance beside the path: standing on an array makes the segment an index,
+// standing on an object makes it a member name.
+function pathSegments(instancePath, instance) {
+  if (!instancePath) return [];
+  const segments = [];
+  let node = instance;
+  for (const raw of instancePath.slice(1).split('/')) {
+    const token = raw.replace(/~1/g, '/').replace(/~0/g, '~');
+    const segment = Array.isArray(node) ? Number(token) : token;
+    segments.push(segment);
+    node = node === undefined || node === null ? undefined : node[segment];
+  }
+  return segments;
+}
+
+// Where the failing keyword lives, as a resource and a path into it.
+// Ajv renders this as one string, joining the resource to the pointer with
+// no separator -- "#/properties/x/enum" for the schema given on the command
+// line, "https://example.org/flavor.json/enum" for a --ref file -- so the
+// two parts are recovered by matching against the $ids actually registered.
+// The pointer is typed the same way an instance path is, a schema having
+// both arrays and objects in it: "anyOf/0" indexes a list where
+// "properties/anyOf" names a member.
+function ruleLocation(schemaPath, schema, refSchemas) {
+  if (schemaPath.startsWith('#')) {
+    return { resource: null, path: pathSegments(schemaPath.slice(1), schema) };
+  }
+  // The separator is a "#" where the $ref carried a fragment and nothing at
+  // all where it did not, so both forms are accepted. The schema given on
+  // the command line is the null resource even when it has an $id of its
+  // own, so that naming it and not naming it describe the same place.
+  const documents = schema?.$id ? { [schema.$id]: schema, ...refSchemas } : refSchemas;
+  for (const [id, contents] of Object.entries(documents)) {
+    if (!schemaPath.startsWith(id)) continue;
+    let pointer = schemaPath.slice(id.length);
+    if (pointer.startsWith('#')) pointer = pointer.slice(1);
+    if (pointer !== '' && !pointer.startsWith('/')) continue;
+    return {
+      resource: id === schema?.$id ? null : id,
+      path: pathSegments(pointer, contents),
+    };
+  }
+  return { resource: null, path: [] };
+}
+
+// ajv-errors replaces the errors an authored errorMessage covers with one
+// error carrying that message and the originals in params.errors. Putting
+// them back, each wearing the authored message, keeps a finding named for
+// the keyword that actually failed -- which is what the other leg reports,
+// and what a reader needs in order to know what was checked.
+function unwrapAuthoredMessages(errors) {
+  const out = [];
+  for (const err of errors) {
+    if (err.keyword === 'errorMessage' && Array.isArray(err.params?.errors)) {
+      for (const wrapped of err.params.errors) {
+        out.push({ ...wrapped, message: err.message });
+      }
+    } else {
+      out.push(err);
+    }
+  }
+  return out;
+}
+
+// The nearest branching conclusion enclosing this error, by schema pointer.
+// A branch subschema's errors are reported under "#/<keyword>/<index>/", so
+// the prefix is the structural relation Ajv provides rather than a guess --
+// and taking the nearest rather than any nests an applicator inside an
+// applicator correctly.
+function enclosingConclusion(err, conclusions) {
+  let nearest = null;
+  for (const candidate of conclusions) {
+    if (candidate === err) continue;
+    if (!err.schemaPath.startsWith(`${candidate.schemaPath}/`)) continue;
+    if (!nearest || candidate.schemaPath.length > nearest.schemaPath.length) {
+      nearest = candidate;
+    }
+  }
+  return nearest;
+}
+
+function findingOf(err, instance, schema, refSchemas) {
+  const params = { ...err.params };
+  delete params.errors;
+  const finding = {
+    path: pathSegments(err.instancePath, instance),
+    keyword: err.keyword,
+    rule: ruleLocation(err.schemaPath, schema, refSchemas),
+    params,
+    message: err.message,
+  };
+  if (err.keyword === 'additionalProperties' || err.keyword === 'unevaluatedProperties') {
+    const member = params.additionalProperty ?? params.unevaluatedProperty;
+    if (member !== undefined) finding.path = [...finding.path, member];
+  }
+  return finding;
+}
+
+function findingsFrom(rawErrors, instance, schema, refSchemas) {
+  const errors = unwrapAuthoredMessages(rawErrors)
+    .filter((err) => !TRANSPARENT_KEYWORDS.has(err.keyword));
+  const conclusions = errors.filter((err) => BRANCHING_KEYWORDS.has(err.keyword));
+  const findings = new Map();
+  for (const err of errors) findings.set(err, findingOf(err, instance, schema, refSchemas));
+
+  const top = [];
+  for (const err of errors) {
+    const parent = enclosingConclusion(err, conclusions);
+    if (!parent) {
+      top.push(findings.get(err));
+      continue;
+    }
+    const owner = findings.get(parent);
+    (owner.causes ??= []).push(findings.get(err));
+  }
+  return top;
+}
+
+function writeOutput(destination, text) {
+  if (destination === '-') {
+    process.stdout.write(text);
+    return;
+  }
+  try {
+    fs.writeFileSync(destination, text);
+  } catch (e) {
+    die(`cannot write ${destination}: ${e.message}`);
+  }
+}
+
+function emit(opts, valid, lines, findings) {
+  if (opts.text !== undefined) {
+    writeOutput(opts.text, (valid ? ['VALID'] : lines).map((l) => `${l}\n`).join(''));
+  }
+  if (opts.json !== undefined) {
+    writeOutput(opts.json, `${JSON.stringify({ valid, findings }, null, 2)}\n`);
+  }
+  return valid ? EXIT_VALID : EXIT_INVALID;
 }
 
 // Honor or refuse a schema's declared JSON Schema version. A top-level
@@ -220,6 +391,7 @@ function main() {
   // together, as an explicit option.
   const ajv = new Ajv2020({ allErrors: true, strict: false, validateFormats: false, logger });
   ajvErrors(ajv);
+  const refSchemas = {};
   for (const path of opts.ref ?? []) {
     const refSchema = loadJson(path, 'ref schema');
     checkDeclaredVersion(refSchema, path, opts['ignore-declared-version']);
@@ -231,6 +403,7 @@ function main() {
     } catch (e) {
       die(`${path} is not a valid JSON Schema: ${e.message}`);
     }
+    refSchemas[refSchema.$id] = refSchema;
   }
   let validate;
   try {
@@ -251,8 +424,9 @@ function main() {
   try {
     instance = JSON.parse(instanceText);
   } catch (e) {
-    process.stdout.write(`INVALID: instance is not valid JSON: ${e.message}\n`);
-    return EXIT_INVALID;
+    const message = `instance is not valid JSON: ${e.message}`;
+    return emit(opts, false, [`INVALID: ${message}`],
+                [{ path: [], keyword: 'parse', params: {}, message }]);
   }
 
   // Like the parse verdict above: a duplicate member name is a fact about
@@ -262,23 +436,30 @@ function main() {
   if (opts['reject-duplicate-members']) {
     const duplicates = findDuplicateMembers(instanceText);
     if (duplicates.size > 0) {
-      for (const name of [...duplicates].sort()) {
-        process.stdout.write(`INVALID: instance contains duplicate member name ${JSON.stringify(name)}\n`);
-      }
-      return EXIT_INVALID;
+      const names = [...duplicates].sort();
+      return emit(
+        opts, false,
+        names.map((name) => `INVALID: instance contains duplicate member name ${JSON.stringify(name)}`),
+        names.map((name) => ({
+          path: [], keyword: 'duplicateMember', params: { memberName: name },
+          message: `instance contains duplicate member name ${JSON.stringify(name)}`,
+        })),
+      );
     }
   }
 
-  if (validate(instance)) {
-    process.stdout.write('VALID\n');
-    return EXIT_VALID;
-  }
-  for (const err of validate.errors) {
+  if (validate(instance)) return emit(opts, true, [], []);
+
+  // The text form is built from Ajv's errors exactly as it always was, so
+  // that what a caller has always got is unaffected by anything the JSON
+  // form decides. The two answer different questions: what this library
+  // said, and what the two legs agree happened.
+  const lines = validate.errors.map((err) => {
     const loc = err.instancePath || '/';
-    process.stdout.write(loc === '/' ? `INVALID: ${err.message}\n`
-                                     : `INVALID: ${loc}: ${err.message}\n`);
-  }
-  return EXIT_INVALID;
+    return loc === '/' ? `INVALID: ${err.message}` : `INVALID: ${loc}: ${err.message}`;
+  });
+  return emit(opts, false, lines,
+              findingsFrom(validate.errors, instance, schema, refSchemas));
 }
 
 process.exit(main());
