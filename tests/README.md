@@ -26,7 +26,9 @@ npm test -- --reporter dot                      totals only
 
 **1. That each wrapper behaves as recorded.** The corpus records what the wrappers do today — including where that is wrong — so any change in behavior surfaces as a failing test.
 
-**2. That the two implementations agree.** On the parts of the output that are the wrappers' own rather than the libraries': exit status, the number of verdict lines, and each failure's location. Message *prose* is the library's, and the standard leaves it to implementations, so it is not compared — except on cases carrying `identicalMessages`, which assert that something the wrappers generate (an authored `errorMessage`, a parse-tier verdict) really does come out word for word on both legs.
+**2. That the two implementations agree.** Every case is run once asking for both output forms, and the two are held to different standards. The **JSON report** must match in every part but `message`, which is what the report exists for. The **text form** must match on exit status, the number of verdict lines and each failure's location; its message prose is the library's, and the standard leaves it to implementations, so it is not compared — except on cases carrying `identicalMessages`, which assert that something the wrappers generate (an authored `errorMessage`, a parse-tier verdict) really does come out word for word on both legs.
+
+A `divergent` defect suspends the text-form comparison and never the report's: those defects record the text form showing what each library said, which is what the text form is for.
 
 ## What a case is
 
@@ -44,13 +46,15 @@ One JSON object in the `cases` array of a file under [`corpus/`](corpus). The fi
 | `argv` | the whole argument list instead, for cases about the argument parser; `{schema}` and `{instance}` stand in for the materialized paths |
 | `omit` | documents to leave unwritten (`"schema"`, `"instance"`) — the missing-file cases |
 | `makeDirectory` | documents to create as a directory instead of a file |
-| `expect` | the recorded behavior: `exit`, `stdout`, `stderrContains` |
+| `expect` | the recorded behavior: `exit`, `stdout`, `report`, `stderrContains` |
 | `identicalMessages` | assert the two legs emit the same lines word for word |
 | `defect` | this case pins behavior known to be wrong; see below |
 
 A case's `name` is written as a claim — *"an array element's location is its index"*, not `array-index` — so the Mocha report reads as a list of assertions about the wrappers rather than a list of identifiers. Where the current behavior is wrong, the claim states the wrong behavior and a `defect` says so; the corpus records what is, and the defect records what ought to be.
 
 A duplicate object member name cannot survive a round trip through a JSON value, and neither can a malformed document, so those cases carry raw text (`schemaText`, `instanceText`) instead.
+
+`report` is the JSON report the run saved, with every `message` removed — the part the two legs are contracted to produce identically — or `null` where the run never got as far as writing one.
 
 `expect` fields are either a single value, which binds both legs, or an object keyed by wrapper name, which records that the two differ. `stderrContains` matches as a substring. The scratch directory's path is scrubbed to `{dir}` in both streams before anything is compared, so expectations that quote a filename stay stable across runs.
 
@@ -93,7 +97,7 @@ A case carrying a `defect` pins behavior known to be wrong:
 
 The `summary` becomes a test name, so the defect inventory appears in the test report. The case's recorded expectations still hold, and repairing the defect breaks them: update the case and delete the `defect` note in the same change.
 
-`divergent` marks a defect that splits the two legs, and suspends only that case's agreement check. A defect both legs share — the root sentinel, for one — leaves them agreeing, so that check still runs.
+`divergent` marks a defect that splits the two legs in the text form, and suspends only that case's text-form comparison. A defect both legs share — the root sentinel, for one — leaves them agreeing, so that check still runs. Neither suspends the report comparison, which every case must pass.
 
 The current defects are summarized in [the contract's Known defects table](../CONTRACT.md#known-defects).
 

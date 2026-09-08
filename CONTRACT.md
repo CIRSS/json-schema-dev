@@ -11,8 +11,10 @@ The corpus has [a schema of its own](tests/corpus-schema.json), and both wrapper
 ```
 jsonschema-validate --schema FILE --instance FILE [--ref FILE]...
                     [--reject-duplicate-members] [--ignore-declared-version]
+                    [--text FILE|-] [--json FILE|-]
 ajv-validate        --schema FILE --instance FILE [--ref FILE]...
                     [--reject-duplicate-members] [--ignore-declared-version]
+                    [--text FILE|-] [--json FILE|-]
 ```
 
 Arguments are **named**, never positional (`-s`/`-i`/`-r` are the short forms). This is deliberate: any JSON object is itself a valid, permissive schema, so a transposed schema and instance would not fail — it would quietly pass. A positional argument is refused rather than guessed at.
@@ -33,7 +35,20 @@ Exit status is the wrappers' own, not the libraries', and the two implementation
 
 ## Output
 
-The verdict goes to **stdout**. Everything else — diagnostics, warnings, usage — goes to **stderr**.
+There are two forms of the verdict, and a run may ask for either or both.
+
+| Option | Form |
+| --- | --- |
+| `--text FILE`, `--text -` | the verdict lines below, one per failure |
+| `--json FILE`, `--json -` | the JSON report |
+
+`-` means stdout, and both options may name a file. Passing neither writes the text form to stdout, which is what a caller who names no option has always got. Naming one turns the other off. Both resolving to stdout is an error (exit 2), the two forms being unreadable interleaved.
+
+**Both forms may be produced by one run**, and that is the usual way to ask for them: a consumer that publishes a validator's own output beside a report built from the structure gets two representations of one execution, rather than two executions that might not describe the same thing.
+
+Exit status is the same whichever form is asked for, and diagnostics, warnings and usage go to **stderr** in every case.
+
+### The text form
 
 A valid instance produces exactly one line:
 
@@ -52,13 +67,40 @@ INVALID: <location>: <message>      a failure at a location inside it
 
 > **Known weakness.** The two line forms are told apart by whether the text after `INVALID: ` begins with `/`, and a message beginning with `/` would be misread as a location. The format has no escape for this.
 
+## The JSON report
+
+```json
+{ "valid": false, "findings": [ … ] }
+```
+
+Each finding carries:
+
+| Field | |
+| --- | --- |
+| `path` | where in the instance, as segments — `[]` is the root, `["@graph", 0]` distinguishes an index from a member name, and a member named `a/b` needs no escape |
+| `keyword` | the keyword that failed |
+| `rule` | where the keyword lives: `{ "resource": null-or-$id, "path": [segments] }`, resolved through any `$ref` that led there |
+| `params` | the identity of what offended — the missing member, the additional member, the allowed values, the limit |
+| `message` | the library's wording, or an authored `errorMessage` where one covers the failure |
+| `causes` | present on a branching applicator: the failures behind its conclusion |
+
+Two rules shape which failures become findings.
+
+**A transparent applicator produces no finding.** `if`/`then`/`else`, `$ref`, `properties`, `items`, `prefixItems`, `propertyNames`, `allOf`, `dependentSchemas`: a conclusion that some subschema failed repeats a location already reported and states nothing about the instance. The finding it enclosed remains traceable to its rule through `rule`.
+
+**A branching applicator produces one finding with its causes beneath it.** `anyOf`, `oneOf`, `contains`, `not`: here the reasons are the only place the detail exists, so dropping them would leave a report saying no alternative matched and never saying why.
+
+`additionalProperties` and `unevaluatedProperties` produce **one finding per rejected member, located at that member**, rather than one at the parent naming several.
+
+The parse tier appears in the report too, since exit status and `valid` must agree: a document that does not parse is one finding with the keyword `parse`, and `--reject-duplicate-members` produces one with the keyword `duplicateMember` per repeated name.
+
 ### What must agree, and what need not
 
 The two implementations must agree on:
 
 - **exit status**, always;
-- **the number of verdict lines**;
-- **the location of each failure**.
+- **the JSON report**, in every part but `message`;
+- in the text form, **the number of verdict lines** and **the location of each failure**.
 
 They need not agree on **message prose**. The standard leaves message text to the implementation, and the two libraries word the same finding differently — `'b' is a required property` against `must have required property 'b'`. Prose divergence is expected and is not a defect.
 
@@ -67,7 +109,9 @@ There are two places where the text *is* contracted to be identical, because the
 - an authored `errorMessage` (below), which is the schema author's whole statement and is printed as written;
 - the parse-tier verdicts of `--reject-duplicate-members`.
 
-The corpus asserts agreement on exit status, line count, and locations for every case, and asserts word-for-word agreement on the cases that carry `identicalMessages`.
+**The two forms carry different obligations, and that is deliberate.** The text form shows what each library said, divergence included; the JSON report is where the two are contracted to describe one thing. So the applicator divergences in the defect table below are properties of the text form, and are absent from the report.
+
+The corpus asserts agreement on the whole report for every case, on exit status, line count and locations for the text form, and word-for-word agreement on the cases that carry `identicalMessages`.
 
 ## `--ref FILE`
 
@@ -122,6 +166,8 @@ Format *assertion*, if it is ever added, goes on both legs together as an explic
 ## Known defects
 
 These are behaviors the corpus pins as current and wrong. Each has a case whose `defect` carries the same summary and becomes a test name. Repairing one breaks its recorded expectation; the case and the note are updated together.
+
+Four of them are properties of the **text form** and do not reach the JSON report: the unescaped pointers and the `/` root sentinel, which a path of segments has no way to express, and the two rows about sub-results and `params`, which the report's causes and fields carry. They are listed here as recorded rather than repaired, since the text form is left as each library reports it.
 
 | Defect | Where |
 | --- | --- |
