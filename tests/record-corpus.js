@@ -18,6 +18,9 @@ let recorded = 0;
 const matches = (text) => !options.grep
     || text.toLowerCase().includes(options.grep.toLowerCase());
 
+const sameLines = (a, b) => a.length === b.length && a.every((line, i) => line === b[i]);
+const firstLine = (text) => (text.trim() ? text.trim().split('\n')[0] : '');
+
 for (const { file, group } of loadCorpus()) {
     const selected = matches(group.group) ? group.cases
         : group.cases.filter((c) => matches(c.name));
@@ -59,9 +62,6 @@ function expectationFrom(results) {
     }
     return expect;
 }
-
-const sameLines = (a, b) => a.length === b.length && a.every((line, i) => line === b[i]);
-const firstLine = (text) => (text.trim() ? text.trim().split('\n')[0] : '');
 
 function parseArguments(argv) {
     const options = {};
