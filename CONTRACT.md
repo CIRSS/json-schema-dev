@@ -2,9 +2,9 @@
 
 `jsonschema-validate` and `ajv-validate` are two implementations of one command-line contract. This document states that contract: what a caller may rely on, what is deliberately left to the underlying library, and where the current implementations do not yet keep their side of it.
 
-The contract is what makes the pair useful. Either wrapper alone is a thin CLI over a validator; together, run over the same input, they are a check on each other, and the check is only as good as the statement of what they are supposed to agree about. Every clause below is exercised by the conformance corpus in [`tests/`](tests/README.md); a clause with no case behind it is a wish, not a contract.
+Every clause below is exercised by the conformance corpus in [`tests/`](tests/README.md).
 
-The corpus is also the pair's first consumer: it has [a schema of its own](tests/corpus-schema.json), and both wrappers validate every corpus file against it on each run.
+The corpus has [a schema of its own](tests/corpus-schema.json), and both wrappers validate every corpus file against it on each run.
 
 ## Invocation
 
@@ -50,7 +50,7 @@ INVALID: <location>: <message>      a failure at a location inside it
 
 `<location>` is a JSON Pointer into the instance.
 
-> **Known weakness.** The two line forms are told apart by whether the text after `INVALID: ` begins with `/`, and a message beginning with `/` would be misread as a location. The format has no escape for this. Any reimplementation should carry the location as a field rather than recovering it from the line.
+> **Known weakness.** The two line forms are told apart by whether the text after `INVALID: ` begins with `/`, and a message beginning with `/` would be misread as a location. The format has no escape for this.
 
 ### What must agree, and what need not
 
@@ -89,9 +89,9 @@ A nonstandard keyword — Ajv gets it from the `ajv-errors` plugin, and `jsonsch
 - `${0}`, `${1/member}` interpolate relative to the failing value: the integer climbs that many levels, an optional path descends from there;
 - a failure no message covers keeps the library's own message.
 
-An authored message is printed exactly as authored, with the location but never any other decoration. That is the point: it is the one place a schema author can close the prose divergence between the two legs deliberately.
+An authored message is printed exactly as authored, with the location but never any other decoration.
 
-Two implementations of one behavior is precisely the shape that needs a conformance suite, and the corpus has already found them disagreeing — see the defects below.
+The corpus has found the two implementations disagreeing here — see the defects below.
 
 ## `--reject-duplicate-members`
 
@@ -109,19 +109,19 @@ Sorting is what makes the output cross-validated: the Python leg finds duplicate
 
 A schema — or a `--ref` file — whose top-level `$schema` names any version other than 2020-12 is **refused** (exit 2) rather than silently reinterpreted. The declaration is the author's statement of which semantics the schema was written for, and 2020-12 would quietly change its meaning: a draft-07 author's `definitions` and `dependencies` are simply ignored unknown members here.
 
-`--ignore-declared-version` discards the declaration and validates as 2020-12 anyway. The reinterpretation is the same; making it a flag makes it a choice.
+`--ignore-declared-version` discards the declaration and validates as 2020-12 anyway.
 
 Declaring 2020-12, or declaring nothing, passes through untouched.
 
 ## `format`
 
-Neither wrapper checks `format`. It is the annotation that 2020-12 makes it by default, on both legs alike and in silence — Ajv's "unknown format ignored" warning is switched off, because ignoring is all the wrapper ever does with a format and a wrapper may not warn about a capability it never has.
+Neither wrapper checks `format`. It is the annotation that 2020-12 makes it by default, on both legs alike and in silence — Ajv's "unknown format ignored" warning is switched off, because ignoring is all the wrapper ever does with a format.
 
 Format *assertion*, if it is ever added, goes on both legs together as an explicit option, with the unknown-format case handled identically.
 
 ## Known defects
 
-These are behaviors the corpus pins as current and wrong. Each has a case whose `defect` carries the same summary and becomes a test name, so the inventory cannot drift from the tests; repairing one breaks its recorded expectation, and the case and the note are updated together.
+These are behaviors the corpus pins as current and wrong. Each has a case whose `defect` carries the same summary and becomes a test name. Repairing one breaks its recorded expectation; the case and the note are updated together.
 
 | Defect | Where |
 | --- | --- |
@@ -129,7 +129,7 @@ These are behaviors the corpus pins as current and wrong. Each has a case whose 
 | **The `errorMessage` implementations disagree on an unresolvable pointer.** `jsonschema-validate` leaves it in the message as written; `ajv-errors` substitutes the text `undefined`, asserting a value the instance does not have. | `05-error-message.json` — `--grep "unresolvable pointer"` |
 | **JSON Pointers are not escaped on the Python leg.** Path segments are joined with `/` without RFC 6901's `~0`/`~1` escapes, so a member named `a/b` renders as `/a/b` — indistinguishable from a nested member — and one named `a~b` renders as a pointer that does not address it. Ajv escapes correctly, so the legs disagree on location. | `01-location-rendering.json` — `--grep "goes unescaped"` |
 | **The instance root is represented by the string `/`.** RFC 6901 gives the root the *empty* pointer and gives `/` to the member named `""`, so a failure on that member is rendered as though it were a failure of the whole instance. Both legs share the fault. | `01-location-rendering.json` — `--grep "as though the whole instance"` |
-| **Sub-results are printed as peers of their conclusion, or not at all.** Ajv returns an applicator's conclusion and the sub-results behind it in one flat array and the wrapper prints them as equal `INVALID` lines, which gives a reason the standing of a requirement; python-jsonschema yields only conclusions, keeping sub-results in each error's `context`, which the wrapper never reads. So the two report different numbers of lines for every applicator. | all of `02-sub-result-nesting.json` |
+| **Sub-results are printed as peers of their conclusion, or not at all.** Ajv returns an applicator's conclusion and the sub-results behind it in one flat array and the wrapper prints them as equal `INVALID` lines; python-jsonschema yields only conclusions, keeping sub-results in each error's `context`, which the wrapper never reads. So the two report different numbers of lines for every applicator. | all of `02-sub-result-nesting.json` |
 | **`params` is discarded from Ajv's errors.** The offending member's identity travels in `err.params` (`missingProperty`, `additionalProperty`, `unevaluatedProperty`, `allowedValues`, `limit`) and the wrapper prints only `err.message` — so two extra members produce two identical lines, and an `enum` failure names no allowed values. | `03-offender-identity.json` |
 
 

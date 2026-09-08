@@ -13,7 +13,7 @@
     },
     "description": {
       "type": "string",
-      "description": "What this group of cases is about, and why the area is worth pinning."
+      "description": "What this group of cases is about."
     },
     "cases": {
       "type": "array",
@@ -54,7 +54,7 @@
         },
         "description": {
           "type": "string",
-          "description": "Why the claim is worth asserting, when the claim does not already say it. Omitted rather than made to restate the name."
+          "description": "What the claim leaves unexplained, when it leaves anything. Omitted rather than made to restate the name."
         },
 
         "schema": {
