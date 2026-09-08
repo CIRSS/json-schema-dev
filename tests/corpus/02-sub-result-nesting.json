@@ -26,11 +26,63 @@
             "INVALID: /1: must be equal to constant",
             "INVALID: must contain at least 1 valid item(s)"
           ]
+        },
+        "report": {
+          "valid": false,
+          "findings": [
+            {
+              "path": [],
+              "keyword": "contains",
+              "rule": {
+                "resource": null,
+                "path": [
+                  "contains"
+                ]
+              },
+              "params": {
+                "minContains": 1
+              },
+              "causes": [
+                {
+                  "path": [
+                    0
+                  ],
+                  "keyword": "const",
+                  "rule": {
+                    "resource": null,
+                    "path": [
+                      "contains",
+                      "const"
+                    ]
+                  },
+                  "params": {
+                    "allowedValue": "core"
+                  }
+                },
+                {
+                  "path": [
+                    1
+                  ],
+                  "keyword": "const",
+                  "rule": {
+                    "resource": null,
+                    "path": [
+                      "contains",
+                      "const"
+                    ]
+                  },
+                  "params": {
+                    "allowedValue": "core"
+                  }
+                }
+              ]
+            }
+          ]
         }
       },
       "defect": {
         "summary": "ajv-validate prints an applicator's sub-results as peers of its conclusion; jsonschema-validate prints the conclusion alone, so the two legs report different numbers of lines.",
-        "should": "Both legs should report the conclusion as the failure and its sub-results subordinate to it, recovered per keyword family rather than by a prefix rule over schema pointers.",
+        "should": "In the JSON output form the two families are treated differently. A transparent applicator -- if/then/else, $ref, properties, items, propertyNames -- produces no entry of its own: its conclusion repeats a location already reported and states nothing about the instance. A branching applicator -- anyOf, oneOf, contains, not -- produces one entry with its branch failures nested beneath it, since those are the only place the detail exists. The Python leg reads them from each error's context; the Node leg recovers them from Ajv's flat array by schemaPath prefix, the nearest enclosing conclusion claiming a sub-result, which nests correctly for an applicator inside an applicator.",
         "divergent": true
       }
     },
@@ -51,6 +103,24 @@
           ],
           "ajv-validate": [
             "INVALID: must contain at least 1 valid item(s)"
+          ]
+        },
+        "report": {
+          "valid": false,
+          "findings": [
+            {
+              "path": [],
+              "keyword": "contains",
+              "rule": {
+                "resource": null,
+                "path": [
+                  "contains"
+                ]
+              },
+              "params": {
+                "minContains": 1
+              }
+            }
           ]
         }
       }
@@ -80,11 +150,59 @@
             "INVALID: must be boolean",
             "INVALID: must match a schema in anyOf"
           ]
+        },
+        "report": {
+          "valid": false,
+          "findings": [
+            {
+              "path": [],
+              "keyword": "anyOf",
+              "rule": {
+                "resource": null,
+                "path": [
+                  "anyOf"
+                ]
+              },
+              "params": {},
+              "causes": [
+                {
+                  "path": [],
+                  "keyword": "type",
+                  "rule": {
+                    "resource": null,
+                    "path": [
+                      "anyOf",
+                      0,
+                      "type"
+                    ]
+                  },
+                  "params": {
+                    "type": "number"
+                  }
+                },
+                {
+                  "path": [],
+                  "keyword": "type",
+                  "rule": {
+                    "resource": null,
+                    "path": [
+                      "anyOf",
+                      1,
+                      "type"
+                    ]
+                  },
+                  "params": {
+                    "type": "boolean"
+                  }
+                }
+              ]
+            }
+          ]
         }
       },
       "defect": {
         "summary": "ajv-validate prints an applicator's sub-results as peers of its conclusion; jsonschema-validate prints the conclusion alone, so the two legs report different numbers of lines.",
-        "should": "Both legs should report the conclusion as the failure and its sub-results subordinate to it, recovered per keyword family rather than by a prefix rule over schema pointers.",
+        "should": "In the JSON output form the two families are treated differently. A transparent applicator -- if/then/else, $ref, properties, items, propertyNames -- produces no entry of its own: its conclusion repeats a location already reported and states nothing about the instance. A branching applicator -- anyOf, oneOf, contains, not -- produces one entry with its branch failures nested beneath it, since those are the only place the detail exists. The Python leg reads them from each error's context; the Node leg recovers them from Ajv's flat array by schemaPath prefix, the nearest enclosing conclusion claiming a sub-result, which nests correctly for an applicator inside an applicator.",
         "divergent": true
       }
     },
@@ -113,11 +231,61 @@
             "INVALID: must be equal to constant",
             "INVALID: must match exactly one schema in oneOf"
           ]
+        },
+        "report": {
+          "valid": false,
+          "findings": [
+            {
+              "path": [],
+              "keyword": "oneOf",
+              "rule": {
+                "resource": null,
+                "path": [
+                  "oneOf"
+                ]
+              },
+              "params": {
+                "passingSchemas": null
+              },
+              "causes": [
+                {
+                  "path": [],
+                  "keyword": "const",
+                  "rule": {
+                    "resource": null,
+                    "path": [
+                      "oneOf",
+                      0,
+                      "const"
+                    ]
+                  },
+                  "params": {
+                    "allowedValue": "draft"
+                  }
+                },
+                {
+                  "path": [],
+                  "keyword": "const",
+                  "rule": {
+                    "resource": null,
+                    "path": [
+                      "oneOf",
+                      1,
+                      "const"
+                    ]
+                  },
+                  "params": {
+                    "allowedValue": "final"
+                  }
+                }
+              ]
+            }
+          ]
         }
       },
       "defect": {
         "summary": "ajv-validate prints an applicator's sub-results as peers of its conclusion; jsonschema-validate prints the conclusion alone, so the two legs report different numbers of lines.",
-        "should": "Both legs should report the conclusion as the failure and its sub-results subordinate to it, recovered per keyword family rather than by a prefix rule over schema pointers.",
+        "should": "In the JSON output form the two families are treated differently. A transparent applicator -- if/then/else, $ref, properties, items, propertyNames -- produces no entry of its own: its conclusion repeats a location already reported and states nothing about the instance. A branching applicator -- anyOf, oneOf, contains, not -- produces one entry with its branch failures nested beneath it, since those are the only place the detail exists. The Python leg reads them from each error's context; the Node leg recovers them from Ajv's flat array by schemaPath prefix, the nearest enclosing conclusion claiming a sub-result, which nests correctly for an applicator inside an applicator.",
         "divergent": true
       }
     },
@@ -143,6 +311,27 @@
           ],
           "ajv-validate": [
             "INVALID: must match exactly one schema in oneOf"
+          ]
+        },
+        "report": {
+          "valid": false,
+          "findings": [
+            {
+              "path": [],
+              "keyword": "oneOf",
+              "rule": {
+                "resource": null,
+                "path": [
+                  "oneOf"
+                ]
+              },
+              "params": {
+                "passingSchemas": [
+                  0,
+                  1
+                ]
+              }
+            }
           ]
         }
       }
@@ -180,11 +369,30 @@
             "INVALID: must have required property 'radius'",
             "INVALID: must match \"then\" schema"
           ]
+        },
+        "report": {
+          "valid": false,
+          "findings": [
+            {
+              "path": [],
+              "keyword": "required",
+              "rule": {
+                "resource": null,
+                "path": [
+                  "then",
+                  "required"
+                ]
+              },
+              "params": {
+                "missingProperty": "radius"
+              }
+            }
+          ]
         }
       },
       "defect": {
         "summary": "ajv-validate prints an applicator's sub-results as peers of its conclusion; jsonschema-validate prints the conclusion alone, so the two legs report different numbers of lines.",
-        "should": "Both legs should report the conclusion as the failure and its sub-results subordinate to it, recovered per keyword family rather than by a prefix rule over schema pointers.",
+        "should": "In the JSON output form the two families are treated differently. A transparent applicator -- if/then/else, $ref, properties, items, propertyNames -- produces no entry of its own: its conclusion repeats a location already reported and states nothing about the instance. A branching applicator -- anyOf, oneOf, contains, not -- produces one entry with its branch failures nested beneath it, since those are the only place the detail exists. The Python leg reads them from each error's context; the Node leg recovers them from Ajv's flat array by schemaPath prefix, the nearest enclosing conclusion claiming a sub-result, which nests correctly for an applicator inside an applicator.",
         "divergent": true
       }
     },
@@ -226,11 +434,30 @@
             "INVALID: must have required property 'side'",
             "INVALID: must match \"else\" schema"
           ]
+        },
+        "report": {
+          "valid": false,
+          "findings": [
+            {
+              "path": [],
+              "keyword": "required",
+              "rule": {
+                "resource": null,
+                "path": [
+                  "else",
+                  "required"
+                ]
+              },
+              "params": {
+                "missingProperty": "side"
+              }
+            }
+          ]
         }
       },
       "defect": {
         "summary": "ajv-validate prints an applicator's sub-results as peers of its conclusion; jsonschema-validate prints the conclusion alone, so the two legs report different numbers of lines.",
-        "should": "Both legs should report the conclusion as the failure and its sub-results subordinate to it, recovered per keyword family rather than by a prefix rule over schema pointers.",
+        "should": "In the JSON output form the two families are treated differently. A transparent applicator -- if/then/else, $ref, properties, items, propertyNames -- produces no entry of its own: its conclusion repeats a location already reported and states nothing about the instance. A branching applicator -- anyOf, oneOf, contains, not -- produces one entry with its branch failures nested beneath it, since those are the only place the detail exists. The Python leg reads them from each error's context; the Node leg recovers them from Ajv's flat array by schemaPath prefix, the nearest enclosing conclusion claiming a sub-result, which nests correctly for an applicator inside an applicator.",
         "divergent": true
       }
     },
@@ -263,6 +490,41 @@
             "INVALID: must have required property 'a'",
             "INVALID: must have required property 'b'"
           ]
+        },
+        "report": {
+          "valid": false,
+          "findings": [
+            {
+              "path": [],
+              "keyword": "required",
+              "rule": {
+                "resource": null,
+                "path": [
+                  "allOf",
+                  0,
+                  "required"
+                ]
+              },
+              "params": {
+                "missingProperty": "a"
+              }
+            },
+            {
+              "path": [],
+              "keyword": "required",
+              "rule": {
+                "resource": null,
+                "path": [
+                  "allOf",
+                  1,
+                  "required"
+                ]
+              },
+              "params": {
+                "missingProperty": "b"
+              }
+            }
+          ]
         }
       }
     },
@@ -283,6 +545,22 @@
           ],
           "ajv-validate": [
             "INVALID: must NOT be valid"
+          ]
+        },
+        "report": {
+          "valid": false,
+          "findings": [
+            {
+              "path": [],
+              "keyword": "not",
+              "rule": {
+                "resource": null,
+                "path": [
+                  "not"
+                ]
+              },
+              "params": {}
+            }
           ]
         }
       }
@@ -311,6 +589,26 @@
           "ajv-validate": [
             "INVALID: must have required property 'billing'"
           ]
+        },
+        "report": {
+          "valid": false,
+          "findings": [
+            {
+              "path": [],
+              "keyword": "required",
+              "rule": {
+                "resource": null,
+                "path": [
+                  "dependentSchemas",
+                  "card",
+                  "required"
+                ]
+              },
+              "params": {
+                "missingProperty": "billing"
+              }
+            }
+          ]
         }
       }
     },
@@ -336,11 +634,30 @@
             "INVALID: must match pattern \"^[a-z]+$\"",
             "INVALID: property name must be valid"
           ]
+        },
+        "report": {
+          "valid": false,
+          "findings": [
+            {
+              "path": [],
+              "keyword": "pattern",
+              "rule": {
+                "resource": null,
+                "path": [
+                  "propertyNames",
+                  "pattern"
+                ]
+              },
+              "params": {
+                "pattern": "^[a-z]+$"
+              }
+            }
+          ]
         }
       },
       "defect": {
         "summary": "ajv-validate prints an applicator's sub-results as peers of its conclusion; jsonschema-validate prints the conclusion alone, so the two legs report different numbers of lines.",
-        "should": "Both legs should report the conclusion as the failure and its sub-results subordinate to it, recovered per keyword family rather than by a prefix rule over schema pointers.",
+        "should": "In the JSON output form the two families are treated differently. A transparent applicator -- if/then/else, $ref, properties, items, propertyNames -- produces no entry of its own: its conclusion repeats a location already reported and states nothing about the instance. A branching applicator -- anyOf, oneOf, contains, not -- produces one entry with its branch failures nested beneath it, since those are the only place the detail exists. The Python leg reads them from each error's context; the Node leg recovers them from Ajv's flat array by schemaPath prefix, the nearest enclosing conclusion claiming a sub-result, which nests correctly for an applicator inside an applicator.",
         "divergent": true
       }
     },
@@ -368,6 +685,28 @@
           ],
           "ajv-validate": [
             "INVALID: /1: must be number"
+          ]
+        },
+        "report": {
+          "valid": false,
+          "findings": [
+            {
+              "path": [
+                1
+              ],
+              "keyword": "type",
+              "rule": {
+                "resource": null,
+                "path": [
+                  "prefixItems",
+                  1,
+                  "type"
+                ]
+              },
+              "params": {
+                "type": "number"
+              }
+            }
           ]
         }
       }
@@ -408,11 +747,71 @@
             "INVALID: /tag: must be equal to constant",
             "INVALID: /tag: must match a schema in anyOf"
           ]
+        },
+        "report": {
+          "valid": false,
+          "findings": [
+            {
+              "path": [
+                "tag"
+              ],
+              "keyword": "anyOf",
+              "rule": {
+                "resource": null,
+                "path": [
+                  "$defs",
+                  "tagged",
+                  "anyOf"
+                ]
+              },
+              "params": {},
+              "causes": [
+                {
+                  "path": [
+                    "tag"
+                  ],
+                  "keyword": "const",
+                  "rule": {
+                    "resource": null,
+                    "path": [
+                      "$defs",
+                      "tagged",
+                      "anyOf",
+                      0,
+                      "const"
+                    ]
+                  },
+                  "params": {
+                    "allowedValue": "a"
+                  }
+                },
+                {
+                  "path": [
+                    "tag"
+                  ],
+                  "keyword": "const",
+                  "rule": {
+                    "resource": null,
+                    "path": [
+                      "$defs",
+                      "tagged",
+                      "anyOf",
+                      1,
+                      "const"
+                    ]
+                  },
+                  "params": {
+                    "allowedValue": "b"
+                  }
+                }
+              ]
+            }
+          ]
         }
       },
       "defect": {
         "summary": "ajv-validate prints an applicator's sub-results as peers of its conclusion; jsonschema-validate prints the conclusion alone, so the two legs report different numbers of lines.",
-        "should": "Both legs should report the conclusion as the failure and its sub-results subordinate to it, recovered per keyword family rather than by a prefix rule over schema pointers.",
+        "should": "In the JSON output form the two families are treated differently. A transparent applicator -- if/then/else, $ref, properties, items, propertyNames -- produces no entry of its own: its conclusion repeats a location already reported and states nothing about the instance. A branching applicator -- anyOf, oneOf, contains, not -- produces one entry with its branch failures nested beneath it, since those are the only place the detail exists. The Python leg reads them from each error's context; the Node leg recovers them from Ajv's flat array by schemaPath prefix, the nearest enclosing conclusion claiming a sub-result, which nests correctly for an applicator inside an applicator.",
         "divergent": true
       }
     },
@@ -455,11 +854,81 @@
             "INVALID: must contain at least 1 valid item(s)",
             "INVALID: must match a schema in anyOf"
           ]
+        },
+        "report": {
+          "valid": false,
+          "findings": [
+            {
+              "path": [],
+              "keyword": "anyOf",
+              "rule": {
+                "resource": null,
+                "path": [
+                  "anyOf"
+                ]
+              },
+              "params": {},
+              "causes": [
+                {
+                  "path": [],
+                  "keyword": "type",
+                  "rule": {
+                    "resource": null,
+                    "path": [
+                      "anyOf",
+                      0,
+                      "allOf",
+                      0,
+                      "type"
+                    ]
+                  },
+                  "params": {
+                    "type": "object"
+                  }
+                },
+                {
+                  "path": [],
+                  "keyword": "contains",
+                  "rule": {
+                    "resource": null,
+                    "path": [
+                      "anyOf",
+                      1,
+                      "contains"
+                    ]
+                  },
+                  "params": {
+                    "minContains": 1
+                  },
+                  "causes": [
+                    {
+                      "path": [
+                        0
+                      ],
+                      "keyword": "const",
+                      "rule": {
+                        "resource": null,
+                        "path": [
+                          "anyOf",
+                          1,
+                          "contains",
+                          "const"
+                        ]
+                      },
+                      "params": {
+                        "allowedValue": "core"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
         }
       },
       "defect": {
         "summary": "ajv-validate prints an applicator's sub-results as peers of its conclusion; jsonschema-validate prints the conclusion alone, so the two legs report different numbers of lines.",
-        "should": "Both legs should report the conclusion as the failure and its sub-results subordinate to it, recovered per keyword family rather than by a prefix rule over schema pointers.",
+        "should": "In the JSON output form the two families are treated differently. A transparent applicator -- if/then/else, $ref, properties, items, propertyNames -- produces no entry of its own: its conclusion repeats a location already reported and states nothing about the instance. A branching applicator -- anyOf, oneOf, contains, not -- produces one entry with its branch failures nested beneath it, since those are the only place the detail exists. The Python leg reads them from each error's context; the Node leg recovers them from Ajv's flat array by schemaPath prefix, the nearest enclosing conclusion claiming a sub-result, which nests correctly for an applicator inside an applicator.",
         "divergent": true
       }
     }

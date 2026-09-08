@@ -18,7 +18,25 @@
         "exit": 1,
         "stdout": [
           "INVALID: a record needs an id"
-        ]
+        ],
+        "report": {
+          "valid": false,
+          "findings": [
+            {
+              "path": [],
+              "keyword": "required",
+              "rule": {
+                "resource": null,
+                "path": [
+                  "required"
+                ]
+              },
+              "params": {
+                "missingProperty": "id"
+              }
+            }
+          ]
+        }
       }
     },
     {
@@ -40,7 +58,25 @@
         "exit": 1,
         "stdout": [
           "INVALID: a record needs an id"
-        ]
+        ],
+        "report": {
+          "valid": false,
+          "findings": [
+            {
+              "path": [],
+              "keyword": "required",
+              "rule": {
+                "resource": null,
+                "path": [
+                  "required"
+                ]
+              },
+              "params": {
+                "missingProperty": "id"
+              }
+            }
+          ]
+        }
       }
     },
     {
@@ -62,7 +98,25 @@
         "exit": 1,
         "stdout": [
           "INVALID: a record must be an object"
-        ]
+        ],
+        "report": {
+          "valid": false,
+          "findings": [
+            {
+              "path": [],
+              "keyword": "type",
+              "rule": {
+                "resource": null,
+                "path": [
+                  "type"
+                ]
+              },
+              "params": {
+                "type": "object"
+              }
+            }
+          ]
+        }
       }
     },
     {
@@ -94,6 +148,28 @@
           "ajv-validate": [
             "INVALID: /id: must be string"
           ]
+        },
+        "report": {
+          "valid": false,
+          "findings": [
+            {
+              "path": [
+                "id"
+              ],
+              "keyword": "type",
+              "rule": {
+                "resource": null,
+                "path": [
+                  "properties",
+                  "id",
+                  "type"
+                ]
+              },
+              "params": {
+                "type": "string"
+              }
+            }
+          ]
         }
       }
     },
@@ -117,7 +193,29 @@
         "exit": 1,
         "stdout": [
           "INVALID: /id: an id must be a string"
-        ]
+        ],
+        "report": {
+          "valid": false,
+          "findings": [
+            {
+              "path": [
+                "id"
+              ],
+              "keyword": "type",
+              "rule": {
+                "resource": null,
+                "path": [
+                  "properties",
+                  "id",
+                  "type"
+                ]
+              },
+              "params": {
+                "type": "string"
+              }
+            }
+          ]
+        }
       }
     },
     {
@@ -149,7 +247,32 @@
         "exit": 1,
         "stdout": [
           "INVALID: /order: not a flavor this shop serves"
-        ]
+        ],
+        "report": {
+          "valid": false,
+          "findings": [
+            {
+              "path": [
+                "order"
+              ],
+              "keyword": "enum",
+              "rule": {
+                "resource": null,
+                "path": [
+                  "$defs",
+                  "flavor",
+                  "enum"
+                ]
+              },
+              "params": {
+                "allowedValues": [
+                  "vanilla",
+                  "chocolate"
+                ]
+              }
+            }
+          ]
+        }
       }
     },
     {
@@ -182,7 +305,30 @@
         "exit": 1,
         "stdout": [
           "INVALID: /order: not a flavor this shop serves"
-        ]
+        ],
+        "report": {
+          "valid": false,
+          "findings": [
+            {
+              "path": [
+                "order"
+              ],
+              "keyword": "enum",
+              "rule": {
+                "resource": "https://example.org/flavor.json",
+                "path": [
+                  "enum"
+                ]
+              },
+              "params": {
+                "allowedValues": [
+                  "vanilla",
+                  "chocolate"
+                ]
+              }
+            }
+          ]
+        }
       }
     },
     {
@@ -215,7 +361,32 @@
         "exit": 1,
         "stdout": [
           "INVALID: /order: not a flavor this shop serves"
-        ]
+        ],
+        "report": {
+          "valid": false,
+          "findings": [
+            {
+              "path": [
+                "order"
+              ],
+              "keyword": "enum",
+              "rule": {
+                "resource": null,
+                "path": [
+                  "$defs",
+                  "flavor",
+                  "enum"
+                ]
+              },
+              "params": {
+                "allowedValues": [
+                  "vanilla",
+                  "chocolate"
+                ]
+              }
+            }
+          ]
+        }
       }
     },
     {
@@ -240,7 +411,29 @@
         "exit": 1,
         "stdout": [
           "INVALID: /artifacts: expected at least two artifacts, got [\"one\"]"
-        ]
+        ],
+        "report": {
+          "valid": false,
+          "findings": [
+            {
+              "path": [
+                "artifacts"
+              ],
+              "keyword": "minItems",
+              "rule": {
+                "resource": null,
+                "path": [
+                  "properties",
+                  "artifacts",
+                  "minItems"
+                ]
+              },
+              "params": {
+                "limit": 2
+              }
+            }
+          ]
+        }
       }
     },
     {
@@ -265,6 +458,27 @@
             "INVALID: /1: each artifact must be a string; 7 is not"
           ],
           "ajv-validate": []
+        },
+        "report": {
+          "valid": false,
+          "findings": [
+            {
+              "path": [
+                1
+              ],
+              "keyword": "type",
+              "rule": {
+                "resource": null,
+                "path": [
+                  "items",
+                  "type"
+                ]
+              },
+              "params": {
+                "type": "string"
+              }
+            }
+          ]
         },
         "stderrContains": {
           "jsonschema-validate": "",
@@ -303,7 +517,31 @@
         "exit": 1,
         "stdout": [
           "INVALID: /0/size: bad size on the artifact with digest \"abc123\""
-        ]
+        ],
+        "report": {
+          "valid": false,
+          "findings": [
+            {
+              "path": [
+                0,
+                "size"
+              ],
+              "keyword": "type",
+              "rule": {
+                "resource": null,
+                "path": [
+                  "items",
+                  "properties",
+                  "size",
+                  "type"
+                ]
+              },
+              "params": {
+                "type": "number"
+              }
+            }
+          ]
+        }
       }
     },
     {
@@ -326,6 +564,24 @@
           ],
           "ajv-validate": [
             "INVALID: missing id on undefined"
+          ]
+        },
+        "report": {
+          "valid": false,
+          "findings": [
+            {
+              "path": [],
+              "keyword": "required",
+              "rule": {
+                "resource": null,
+                "path": [
+                  "required"
+                ]
+              },
+              "params": {
+                "missingProperty": "id"
+              }
+            }
           ]
         }
       },

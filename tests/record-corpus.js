@@ -19,6 +19,7 @@ const matches = (text) => !options.grep
     || text.toLowerCase().includes(options.grep.toLowerCase());
 
 const sameLines = (a, b) => a.length === b.length && a.every((line, i) => line === b[i]);
+const sameJson = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 const firstLine = (text) => (text.trim() ? text.trim().split('\n')[0] : '');
 
 for (const { file, group } of loadCorpus()) {
@@ -35,6 +36,7 @@ for (const { file, group } of loadCorpus()) {
         for (const leg of LEGS) {
             console.log(`    ${leg}: exit ${results[leg].exit}`);
             for (const line of results[leg].stdout) console.log(`      out ${line}`);
+            console.log(`      report ${JSON.stringify(results[leg].report)}`);
             for (const line of results[leg].stderr.trim().split('\n').filter(Boolean)) {
                 console.log(`      err ${line}`);
             }
@@ -56,6 +58,8 @@ function expectationFrom(results) {
     expect.exit = left.exit === right.exit ? left.exit : perLeg((r) => r.exit);
     expect.stdout = sameLines(left.stdout, right.stdout) ? left.stdout
         : perLeg((r) => r.stdout);
+    expect.report = sameJson(left.report, right.report) ? left.report
+        : perLeg((r) => r.report);
 
     if (LEGS.some((leg) => results[leg].stderr.trim())) {
         expect.stderrContains = perLeg((r) => firstLine(r.stderr));

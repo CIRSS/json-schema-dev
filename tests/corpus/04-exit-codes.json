@@ -17,7 +17,11 @@
         "exit": 0,
         "stdout": [
           "VALID"
-        ]
+        ],
+        "report": {
+          "valid": true,
+          "findings": []
+        }
       }
     },
     {
@@ -38,6 +42,24 @@
           "ajv-validate": [
             "INVALID: must have required property 'id'"
           ]
+        },
+        "report": {
+          "valid": false,
+          "findings": [
+            {
+              "path": [],
+              "keyword": "required",
+              "rule": {
+                "resource": null,
+                "path": [
+                  "required"
+                ]
+              },
+              "params": {
+                "missingProperty": "id"
+              }
+            }
+          ]
         }
       }
     },
@@ -55,6 +77,16 @@
           "ajv-validate": [
             "INVALID: instance is not valid JSON: Expected ',' or '}' after property value in JSON at position 10 (line 1 column 11)"
           ]
+        },
+        "report": {
+          "valid": false,
+          "findings": [
+            {
+              "path": [],
+              "keyword": "parse",
+              "params": {}
+            }
+          ]
         }
       }
     },
@@ -65,6 +97,7 @@
       "expect": {
         "exit": 2,
         "stdout": [],
+        "report": null,
         "stderrContains": {
           "jsonschema-validate": "jsonschema-validate: error: schema file {dir}/schema.json is not valid JSON: Expecting value: line 1 column 10 (char 9)",
           "ajv-validate": "ajv-validate: error: schema file {dir}/schema.json is not valid JSON: Unexpected end of JSON input"
@@ -80,6 +113,7 @@
       "expect": {
         "exit": 2,
         "stdout": [],
+        "report": null,
         "stderrContains": {
           "jsonschema-validate": "jsonschema-validate: error: {dir}/schema.json is not a valid JSON Schema: 5 is not valid under any of the given schemas",
           "ajv-validate": "ajv-validate: error: {dir}/schema.json is not a valid JSON Schema: data/type must be equal to one of the allowed values, data/type must be array, data/type must match a schema in anyOf"
@@ -97,6 +131,7 @@
       "expect": {
         "exit": 2,
         "stdout": [],
+        "report": null,
         "stderrContains": {
           "jsonschema-validate": "jsonschema-validate: error: instance file not found: {dir}/instance.json",
           "ajv-validate": "ajv-validate: error: instance file not found: {dir}/instance.json"
@@ -113,6 +148,7 @@
       "expect": {
         "exit": 2,
         "stdout": [],
+        "report": null,
         "stderrContains": {
           "jsonschema-validate": "jsonschema-validate: error: schema file not found: {dir}/schema.json",
           "ajv-validate": "ajv-validate: error: schema file not found: {dir}/schema.json"
@@ -129,6 +165,7 @@
       "expect": {
         "exit": 2,
         "stdout": [],
+        "report": null,
         "stderrContains": {
           "jsonschema-validate": "jsonschema-validate: error: instance path is a directory: {dir}/instance.json",
           "ajv-validate": "ajv-validate: error: instance path is a directory: {dir}/instance.json"
@@ -145,6 +182,7 @@
       "expect": {
         "exit": 2,
         "stdout": [],
+        "report": null,
         "stderrContains": {
           "jsonschema-validate": "jsonschema-validate: error: {dir}/schema.json contains an unresolvable $ref: PointerToNowhere: '/$defs/absent' does not exist within {'$ref': '#/$defs/absent'}",
           "ajv-validate": "ajv-validate: error: {dir}/schema.json is not a valid JSON Schema: can't resolve reference #/$defs/absent from id #"
@@ -162,6 +200,7 @@
       "expect": {
         "exit": 2,
         "stdout": [],
+        "report": null,
         "stderrContains": {
           "jsonschema-validate": "usage: jsonschema-validate [-h] -s FILE -i FILE [-r FILE]",
           "ajv-validate": "ajv-validate: error: both --schema and --instance are required"
@@ -182,6 +221,7 @@
       "expect": {
         "exit": 2,
         "stdout": [],
+        "report": null,
         "stderrContains": {
           "jsonschema-validate": "usage: jsonschema-validate [-h] -s FILE -i FILE [-r FILE]",
           "ajv-validate": "ajv-validate: error: Unknown option '--nonesuch'"
@@ -200,6 +240,7 @@
       "expect": {
         "exit": 2,
         "stdout": [],
+        "report": null,
         "stderrContains": {
           "jsonschema-validate": "usage: jsonschema-validate [-h] -s FILE -i FILE [-r FILE]",
           "ajv-validate": "ajv-validate: error: Unexpected argument '{dir}/schema.json'. This command does not take positional arguments"

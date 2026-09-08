@@ -31,6 +31,41 @@
             "INVALID: must NOT have additional properties",
             "INVALID: must NOT have additional properties"
           ]
+        },
+        "report": {
+          "valid": false,
+          "findings": [
+            {
+              "path": [
+                "note"
+              ],
+              "keyword": "additionalProperties",
+              "rule": {
+                "resource": null,
+                "path": [
+                  "additionalProperties"
+                ]
+              },
+              "params": {
+                "additionalProperty": "note"
+              }
+            },
+            {
+              "path": [
+                "draft"
+              ],
+              "keyword": "additionalProperties",
+              "rule": {
+                "resource": null,
+                "path": [
+                  "additionalProperties"
+                ]
+              },
+              "params": {
+                "additionalProperty": "draft"
+              }
+            }
+          ]
         }
       }
     },
@@ -67,6 +102,41 @@
             "INVALID: must NOT have unevaluated properties",
             "INVALID: must NOT have unevaluated properties"
           ]
+        },
+        "report": {
+          "valid": false,
+          "findings": [
+            {
+              "path": [
+                "note"
+              ],
+              "keyword": "unevaluatedProperties",
+              "rule": {
+                "resource": null,
+                "path": [
+                  "unevaluatedProperties"
+                ]
+              },
+              "params": {
+                "unevaluatedProperty": "note"
+              }
+            },
+            {
+              "path": [
+                "draft"
+              ],
+              "keyword": "unevaluatedProperties",
+              "rule": {
+                "resource": null,
+                "path": [
+                  "unevaluatedProperties"
+                ]
+              },
+              "params": {
+                "unevaluatedProperty": "draft"
+              }
+            }
+          ]
         }
       }
     },
@@ -90,6 +160,37 @@
           "ajv-validate": [
             "INVALID: must have required property 'a'",
             "INVALID: must have required property 'b'"
+          ]
+        },
+        "report": {
+          "valid": false,
+          "findings": [
+            {
+              "path": [],
+              "keyword": "required",
+              "rule": {
+                "resource": null,
+                "path": [
+                  "required"
+                ]
+              },
+              "params": {
+                "missingProperty": "a"
+              }
+            },
+            {
+              "path": [],
+              "keyword": "required",
+              "rule": {
+                "resource": null,
+                "path": [
+                  "required"
+                ]
+              },
+              "params": {
+                "missingProperty": "b"
+              }
+            }
           ]
         }
       }
@@ -117,6 +218,27 @@
           "ajv-validate": [
             "INVALID: must be equal to one of the allowed values"
           ]
+        },
+        "report": {
+          "valid": false,
+          "findings": [
+            {
+              "path": [],
+              "keyword": "enum",
+              "rule": {
+                "resource": null,
+                "path": [
+                  "enum"
+                ]
+              },
+              "params": {
+                "allowedValues": [
+                  "draft",
+                  "final"
+                ]
+              }
+            }
+          ]
         }
       }
     },
@@ -137,6 +259,24 @@
           "ajv-validate": [
             "INVALID: must NOT have more than 5 characters"
           ]
+        },
+        "report": {
+          "valid": false,
+          "findings": [
+            {
+              "path": [],
+              "keyword": "maxLength",
+              "rule": {
+                "resource": null,
+                "path": [
+                  "maxLength"
+                ]
+              },
+              "params": {
+                "limit": 5
+              }
+            }
+          ]
         }
       }
     },
@@ -155,6 +295,24 @@
           ],
           "ajv-validate": [
             "INVALID: must be object"
+          ]
+        },
+        "report": {
+          "valid": false,
+          "findings": [
+            {
+              "path": [],
+              "keyword": "type",
+              "rule": {
+                "resource": null,
+                "path": [
+                  "type"
+                ]
+              },
+              "params": {
+                "type": "object"
+              }
+            }
           ]
         }
       }

@@ -18,6 +18,24 @@
           "ajv-validate": [
             "INVALID: must be object"
           ]
+        },
+        "report": {
+          "valid": false,
+          "findings": [
+            {
+              "path": [],
+              "keyword": "type",
+              "rule": {
+                "resource": null,
+                "path": [
+                  "type"
+                ]
+              },
+              "params": {
+                "type": "object"
+              }
+            }
+          ]
         }
       }
     },
@@ -41,6 +59,24 @@
           ],
           "ajv-validate": [
             "INVALID: must have required property 'b'"
+          ]
+        },
+        "report": {
+          "valid": false,
+          "findings": [
+            {
+              "path": [],
+              "keyword": "required",
+              "rule": {
+                "resource": null,
+                "path": [
+                  "required"
+                ]
+              },
+              "params": {
+                "missingProperty": "b"
+              }
+            }
           ]
         }
       }
@@ -70,6 +106,28 @@
           "ajv-validate": [
             "INVALID: /creator: must have required property 'id'"
           ]
+        },
+        "report": {
+          "valid": false,
+          "findings": [
+            {
+              "path": [
+                "creator"
+              ],
+              "keyword": "required",
+              "rule": {
+                "resource": null,
+                "path": [
+                  "properties",
+                  "creator",
+                  "required"
+                ]
+              },
+              "params": {
+                "missingProperty": "id"
+              }
+            }
+          ]
         }
       }
     },
@@ -93,6 +151,27 @@
           ],
           "ajv-validate": [
             "INVALID: /1: must be number"
+          ]
+        },
+        "report": {
+          "valid": false,
+          "findings": [
+            {
+              "path": [
+                1
+              ],
+              "keyword": "type",
+              "rule": {
+                "resource": null,
+                "path": [
+                  "items",
+                  "type"
+                ]
+              },
+              "params": {
+                "type": "number"
+              }
+            }
           ]
         }
       }
@@ -131,6 +210,33 @@
           "ajv-validate": [
             "INVALID: /records/1/id: must be string"
           ]
+        },
+        "report": {
+          "valid": false,
+          "findings": [
+            {
+              "path": [
+                "records",
+                1,
+                "id"
+              ],
+              "keyword": "type",
+              "rule": {
+                "resource": null,
+                "path": [
+                  "properties",
+                  "records",
+                  "items",
+                  "properties",
+                  "id",
+                  "type"
+                ]
+              },
+              "params": {
+                "type": "string"
+              }
+            }
+          ]
         }
       }
     },
@@ -159,6 +265,28 @@
           ],
           "ajv-validate": [
             "INVALID: must be number"
+          ]
+        },
+        "report": {
+          "valid": false,
+          "findings": [
+            {
+              "path": [
+                ""
+              ],
+              "keyword": "type",
+              "rule": {
+                "resource": null,
+                "path": [
+                  "properties",
+                  "",
+                  "type"
+                ]
+              },
+              "params": {
+                "type": "number"
+              }
+            }
           ]
         }
       }
@@ -190,6 +318,28 @@
           "ajv-validate": [
             "INVALID: /a~1b: must be number"
           ]
+        },
+        "report": {
+          "valid": false,
+          "findings": [
+            {
+              "path": [
+                "a/b"
+              ],
+              "keyword": "type",
+              "rule": {
+                "resource": null,
+                "path": [
+                  "properties",
+                  "a/b",
+                  "type"
+                ]
+              },
+              "params": {
+                "type": "number"
+              }
+            }
+          ]
         }
       }
     },
@@ -220,6 +370,28 @@
           "ajv-validate": [
             "INVALID: /a~0b: must be number"
           ]
+        },
+        "report": {
+          "valid": false,
+          "findings": [
+            {
+              "path": [
+                "a~b"
+              ],
+              "keyword": "type",
+              "rule": {
+                "resource": null,
+                "path": [
+                  "properties",
+                  "a~b",
+                  "type"
+                ]
+              },
+              "params": {
+                "type": "number"
+              }
+            }
+          ]
         }
       }
     },
@@ -249,6 +421,45 @@
           "ajv-validate": [
             "INVALID: /a: must be number",
             "INVALID: /b: must be number"
+          ]
+        },
+        "report": {
+          "valid": false,
+          "findings": [
+            {
+              "path": [
+                "a"
+              ],
+              "keyword": "type",
+              "rule": {
+                "resource": null,
+                "path": [
+                  "properties",
+                  "a",
+                  "type"
+                ]
+              },
+              "params": {
+                "type": "number"
+              }
+            },
+            {
+              "path": [
+                "b"
+              ],
+              "keyword": "type",
+              "rule": {
+                "resource": null,
+                "path": [
+                  "properties",
+                  "b",
+                  "type"
+                ]
+              },
+              "params": {
+                "type": "number"
+              }
+            }
           ]
         }
       }

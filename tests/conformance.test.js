@@ -31,6 +31,10 @@ for (const { group } of loadCorpus()) {
                             assert.deepStrictEqual(observed.stdout, expected.stdout,
                                 `stdout\n${describeCase(testCase)}`);
                         }
+                        if ('report' in expected) {
+                            assert.deepStrictEqual(observed.report, expected.report,
+                                `JSON report\n${describeCase(testCase)}`);
+                        }
                         if (expected.stderrContains) {
                             assert.ok(observed.stderr.includes(expected.stderrContains),
                                 `stderr should contain ${JSON.stringify(expected.stderrContains)}`
@@ -58,6 +62,19 @@ for (const { group } of loadCorpus()) {
                         assert.deepStrictEqual(left.stdout, right.stdout,
                             'this case asserts identical messages, but the two differ');
                     }
+                });
+
+                it('produces the same report from both implementations', function () {
+                    // Not suspended by a divergent defect: those record the
+                    // text form showing what each library said, which is what
+                    // the text form is for. The JSON report is where the two
+                    // are contracted to agree, and a divergence in it is a
+                    // different and worse thing than a divergence in prose.
+                    const [left, right] = LEGS.map((leg) => results[leg].report);
+                    assert.deepStrictEqual(left, right,
+                        'the two implementations disagree about what was found'
+                        + `\n  ${LEGS[0]}: ${JSON.stringify(left)}`
+                        + `\n  ${LEGS[1]}: ${JSON.stringify(right)}`);
                 });
 
                 if (testCase.defect) {

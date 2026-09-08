@@ -31,7 +31,7 @@ function materialize(testCase) {
     const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'json-schema-dev-'));
     const omit = new Set(testCase.omit || []);
     const directories = new Set(testCase.makeDirectory || []);
-    const paths = { directory, refs: [] };
+    const paths = { directory, refs: [], report: path.join(directory, 'report.json') };
 
     for (const role of ['schema', 'instance']) {
         const file = path.join(directory, `${role}.json`);
@@ -58,6 +58,16 @@ function materialize(testCase) {
 
 // Builds one validator's argument list, from "argv" if the case supplies it,
 // otherwise from --schema, --instance, a --ref per file, and "args".
+//
+// Both output forms are asked for in the one run, which is what the pair of
+// options is for: the text form is what a caller has always got, the JSON
+// form is where the two legs are contracted to agree, and taking them from
+// separate runs would leave a case where they could disagree about which
+// run they were describing. --text is passed explicitly because naming
+// either form turns the other off.
+//
+// A case supplying "argv" is about the argument parser, and gets exactly the
+// arguments it names.
 function argumentsFor(testCase, paths) {
     if (testCase.argv) {
         return testCase.argv.map((argument) => argument
@@ -66,7 +76,24 @@ function argumentsFor(testCase, paths) {
     }
     const args = ['--schema', paths.schema, '--instance', paths.instance];
     for (const ref of paths.refs) args.push('--ref', ref);
-    return args.concat(testCase.args || []);
+    args.push(...(testCase.args || []));
+    // A caller with nowhere to put a report asks for the text form alone.
+    // Naming the option with no path would write a file called "undefined".
+    if (paths.report) args.push('--text', '-', '--json', paths.report);
+    return args;
+}
+
+// A report with every message removed: what the two legs must produce
+// identically. Message prose is the library's, and is compared through the
+// text form instead, where a case that asks for it says so.
+function structureOf(node) {
+    if (Array.isArray(node)) return node.map(structureOf);
+    if (node && typeof node === 'object') {
+        return Object.fromEntries(Object.entries(node)
+            .filter(([key]) => key !== 'message')
+            .map(([key, value]) => [key, structureOf(value)]));
+    }
+    return node;
 }
 
 // Runs one validator and returns { exit, stdout, stderr }.
@@ -90,7 +117,20 @@ function runLeg(leg, testCase, paths) {
         exit,
         stdout: stdout.length ? scrub(stdout).replace(/\n$/, '').split('\n') : [],
         stderr: scrub(stderr),
+        report: readReport(paths, scrub),
     };
+}
+
+// The JSON report the run saved, with messages removed, or null where the run
+// never got as far as writing one -- an unreadable file, a schema that is not
+// a schema, an argument the parser refused.
+function readReport(paths, scrub) {
+    if (!fs.existsSync(paths.report)) return null;
+    try {
+        return structureOf(JSON.parse(scrub(fs.readFileSync(paths.report, 'utf8'))));
+    } catch (error) {
+        return null;
+    }
 }
 
 // Runs a case through both validators, removing the scratch directory after.
@@ -108,10 +148,11 @@ function runCase(testCase) {
 function expectedFor(testCase, leg) {
     const expect = testCase.expect || {};
     const resolved = {};
-    for (const field of ['exit', 'stdout', 'stderrContains']) {
+    for (const field of ['exit', 'stdout', 'stderrContains', 'report']) {
         if (!(field in expect)) continue;
         const value = expect[field];
         const perLeg = value && !Array.isArray(value) && typeof value === 'object'
+            && Object.keys(value).length > 0
             && Object.keys(value).every((key) => LEGS.includes(key));
         resolved[field] = perLeg ? value[leg] : value;
     }
@@ -135,6 +176,6 @@ function parseLine(line) {
 const locations = (stdout) => stdout.map((line) => parseLine(line).location);
 
 module.exports = {
-    LEGS, CORPUS_DIR, loadCorpus, materialize, argumentsFor,
+    LEGS, CORPUS_DIR, loadCorpus, materialize, argumentsFor, structureOf,
     runLeg, runCase, expectedFor, parseLine, locations,
 };

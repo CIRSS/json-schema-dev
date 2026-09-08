@@ -139,6 +139,10 @@
             { "$ref": "#/$defs/perLegStdout" }
           ]
         },
+        "report": {
+          "description": "The JSON report the run saved, with every message removed -- the part the two implementations are contracted to produce identically. Null where the run never wrote one, such as an argument the parser refused. An object keyed by validator name records that the two differ, which is a defect rather than a difference of prose.",
+          "type": ["object", "null"]
+        },
         "stderrContains": {
           "description": "A substring each validator's stderr must contain. Matched loosely because diagnostics quote paths and library prose.",
           "oneOf": [

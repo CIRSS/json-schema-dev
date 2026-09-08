@@ -33,7 +33,11 @@
         "exit": 0,
         "stdout": [
           "VALID"
-        ]
+        ],
+        "report": {
+          "valid": true,
+          "findings": []
+        }
       }
     },
     {
@@ -71,6 +75,24 @@
           "ajv-validate": [
             "INVALID: must have required property 'id'"
           ]
+        },
+        "report": {
+          "valid": false,
+          "findings": [
+            {
+              "path": [],
+              "keyword": "required",
+              "rule": {
+                "resource": "https://example.org/component",
+                "path": [
+                  "required"
+                ]
+              },
+              "params": {
+                "missingProperty": "id"
+              }
+            }
+          ]
         }
       }
     },
@@ -91,6 +113,7 @@
       "expect": {
         "exit": 2,
         "stdout": [],
+        "report": null,
         "stderrContains": {
           "jsonschema-validate": "jsonschema-validate: error: {dir}/schema.json contains an unresolvable $ref: Unresolvable: https://example.org/component",
           "ajv-validate": "ajv-validate: error: {dir}/schema.json is not a valid JSON Schema: can't resolve reference https://example.org/component from id https://example.org/composite"
@@ -114,6 +137,7 @@
       "expect": {
         "exit": 2,
         "stdout": [],
+        "report": null,
         "stderrContains": {
           "jsonschema-validate": "jsonschema-validate: error: ref schema file {dir}/ref-0.json has no $id to register it under",
           "ajv-validate": "ajv-validate: error: ref schema file {dir}/ref-0.json has no $id to register it under"
@@ -162,6 +186,24 @@
           "ajv-validate": [
             "INVALID: must have required property 'id'"
           ]
+        },
+        "report": {
+          "valid": false,
+          "findings": [
+            {
+              "path": [],
+              "keyword": "required",
+              "rule": {
+                "resource": "https://example.org/base",
+                "path": [
+                  "required"
+                ]
+              },
+              "params": {
+                "missingProperty": "id"
+              }
+            }
+          ]
         }
       }
     },
@@ -186,7 +228,11 @@
         "exit": 0,
         "stdout": [
           "VALID"
-        ]
+        ],
+        "report": {
+          "valid": true,
+          "findings": []
+        }
       }
     },
     {
@@ -222,6 +268,28 @@
           ],
           "ajv-validate": [
             "INVALID: /tag: must match pattern \"^[a-z]+$\""
+          ]
+        },
+        "report": {
+          "valid": false,
+          "findings": [
+            {
+              "path": [
+                "tag"
+              ],
+              "keyword": "pattern",
+              "rule": {
+                "resource": "https://example.org/component",
+                "path": [
+                  "$defs",
+                  "tag",
+                  "pattern"
+                ]
+              },
+              "params": {
+                "pattern": "^[a-z]+$"
+              }
+            }
           ]
         }
       }
