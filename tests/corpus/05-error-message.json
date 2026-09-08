@@ -1,6 +1,6 @@
 {
   "group": "authored messages",
-  "description": "errorMessage is nonstandard — Ajv gets it from the ajv-errors plugin, and jsonschema-validate implements the same portable subset independently by reading the messages out of the schema JSON. Two independent implementations of one behavior is exactly the shape that wants a conformance suite, and an authored message is the one place the two legs are contracted to emit the identical sentence.",
+  "description": "errorMessage is nonstandard — Ajv gets it from the ajv-errors plugin, and jsonschema-validate implements the same portable subset independently by reading the messages out of the schema JSON. An authored message is one of the two texts the wrappers generate rather than the libraries, so the two legs are contracted to emit it identically.",
   "cases": [
     {
       "name": "a plain-string errorMessage covers every failure within its subschema",
@@ -117,6 +117,104 @@
         "exit": 1,
         "stdout": [
           "INVALID: /id: an id must be a string"
+        ]
+      }
+    },
+    {
+      "name": "an errorMessage inside a $ref'd definition covers the failure it names",
+      "description": "A definition factored out under $defs and applied by $ref is the ordinary way to write a schema that repeats itself, and the message belongs with the definition rather than at each referring site. The lookup has to cross the $ref boundary to find it.",
+      "schema": {
+        "$defs": {
+          "flavor": {
+            "enum": [
+              "vanilla",
+              "chocolate"
+            ],
+            "errorMessage": {
+              "enum": "not a flavor this shop serves"
+            }
+          }
+        },
+        "properties": {
+          "order": {
+            "$ref": "#/$defs/flavor"
+          }
+        }
+      },
+      "instance": {
+        "order": "pistachio"
+      },
+      "identicalMessages": true,
+      "expect": {
+        "exit": 1,
+        "stdout": [
+          "INVALID: /order: not a flavor this shop serves"
+        ]
+      }
+    },
+    {
+      "name": "an errorMessage in a --ref'd file covers a failure inside that component",
+      "description": "The same lookup across a file boundary rather than a pointer within one document: the message travels with the component that states the requirement.",
+      "schema": {
+        "properties": {
+          "order": {
+            "$ref": "https://example.org/flavor.json"
+          }
+        }
+      },
+      "refs": [
+        {
+          "$id": "https://example.org/flavor.json",
+          "enum": [
+            "vanilla",
+            "chocolate"
+          ],
+          "errorMessage": {
+            "enum": "not a flavor this shop serves"
+          }
+        }
+      ],
+      "instance": {
+        "order": "pistachio"
+      },
+      "identicalMessages": true,
+      "expect": {
+        "exit": 1,
+        "stdout": [
+          "INVALID: /order: not a flavor this shop serves"
+        ]
+      }
+    },
+    {
+      "name": "a message inside the $ref'd definition beats one at the referring site",
+      "description": "Crossing the boundary does not change the rule: the lookup takes the first message it meets walking outward from the failing keyword, and the definition's own message is nearer than the one beside the $ref.",
+      "schema": {
+        "$defs": {
+          "flavor": {
+            "enum": [
+              "vanilla",
+              "chocolate"
+            ],
+            "errorMessage": {
+              "enum": "not a flavor this shop serves"
+            }
+          }
+        },
+        "properties": {
+          "order": {
+            "$ref": "#/$defs/flavor",
+            "errorMessage": "the order line is wrong"
+          }
+        }
+      },
+      "instance": {
+        "order": "pistachio"
+      },
+      "identicalMessages": true,
+      "expect": {
+        "exit": 1,
+        "stdout": [
+          "INVALID: /order: not a flavor this shop serves"
         ]
       }
     },

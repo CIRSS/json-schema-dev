@@ -153,11 +153,32 @@ def location(error):
     return "/" + "/".join(str(p) for p in error.absolute_path)
 
 
-def resolve_pointer(schema, path):
-    node = schema
-    for segment in path:
-        node = node[segment]
-    return node
+def enclosing_schemas(error, schema):
+    """The subschemas around a failing keyword, innermost first.
+
+    The innermost is error.schema, the subschema the validator was applying
+    when the keyword failed. It has to be taken from the error rather than
+    found by walking, because a $ref is followed without leaving any trace
+    in absolute_schema_path: for a keyword inside a definition applied by
+    reference, the path names the referring member and stops there, so no
+    walk from the root reaches the definition at all.
+
+    The rest are recovered by walking that path from the root, which gives
+    the enclosing subschemas in the referring document. A prefix that does
+    not resolve is skipped rather than ending the walk -- inside a $ref'd
+    definition the deeper prefixes are exactly the ones that do not resolve,
+    and the shallower ones are still real enclosing schemas.
+    """
+    yield error.schema
+    path = list(error.absolute_schema_path)
+    for depth in range(len(path), -1, -1):
+        node = schema
+        try:
+            for segment in path[:depth]:
+                node = node[segment]
+        except (KeyError, IndexError, TypeError):
+            continue
+        yield node
 
 
 def custom_message(error, schema):
@@ -171,13 +192,12 @@ def custom_message(error, schema):
     per failing keyword, and ${/json/pointer} interpolates the instance value
     at that pointer (JSON-encoded, resolved from the instance root, matching
     ajv-errors). Failures no message covers keep the library's own message.
+
+    A message stated with a factored-out definition therefore covers failures
+    of that definition wherever it is applied, and beats one written beside
+    the $ref, the definition being the nearer of the two.
     """
-    path = list(error.absolute_schema_path)
-    for depth in range(len(path), -1, -1):
-        try:
-            node = resolve_pointer(schema, path[:depth])
-        except (KeyError, IndexError, TypeError):
-            continue
+    for node in enclosing_schemas(error, schema):
         if not isinstance(node, dict):
             continue
         declared = node.get("errorMessage")

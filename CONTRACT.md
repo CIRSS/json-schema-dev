@@ -84,6 +84,7 @@ A nonstandard keyword — Ajv gets it from the `ajv-errors` plugin, and `jsonsch
 - a plain-string `errorMessage` covers every failure within its subschema;
 - an object form supplies one message per failing keyword;
 - the lookup walks outward from the failing keyword and takes the first message it meets, so an inner message beats an enclosing one;
+- the walk starts at the subschema the failing keyword sits in, wherever a `$ref` led to it, so a message stated with a factored-out definition covers failures of that definition everywhere it is applied — and beats one written beside the `$ref`, the definition being nearer;
 - `${/a/json/pointer}` interpolates the instance value at that absolute pointer, JSON-encoded;
 - `${0}`, `${1/member}` interpolate relative to the failing value: the integer climbs that many levels, an optional path descends from there;
 - a failure no message covers keeps the library's own message.
