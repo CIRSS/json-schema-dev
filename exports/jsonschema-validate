@@ -435,8 +435,97 @@ def lost(error, detail):
         f"/{'/'.join(str(p) for p in error.absolute_path)}: {detail}")
 
 
-def rule_location(error, schema, registry):
-    """Where the failing keyword lives, as a resource and a path into it.
+def index_documents(schema, refs):
+    """Every name a $ref can use, mapped to a document and a path into it.
+
+    A schema names parts of itself two ways: an $id on a subschema, which
+    makes it a resource in its own right, and an $anchor, which names a spot
+    without making one. Both are navigation aids rather than report
+    coordinates: a clause is always reported as a path from the root of a
+    document the caller handed over, because that is the file a reader has.
+
+    Keys are what a $ref can say -- "#" and "#anchor" for the schema on the
+    command line, an $id for anything that has one, and "<$id>#anchor" for an
+    anchor inside it. Values are (document, path from that document's root).
+    """
+    index = {}
+
+    def walk(node, document, base, path):
+        if isinstance(node, list):
+            for i, item in enumerate(node):
+                walk(item, document, base, path + [i])
+            return
+        if not isinstance(node, dict):
+            return
+        identifier = node.get("$id")
+        if isinstance(identifier, str) and path:
+            base = identifier
+            index[identifier] = (document, path)
+        anchor = node.get("$anchor")
+        if isinstance(anchor, str):
+            index[f"{base or ''}#{anchor}"] = (document, path)
+        for key, item in node.items():
+            walk(item, document, base, path + [key])
+
+    index["#"] = (schema, [])
+    walk(schema, schema, None, [])
+    for ref in refs:
+        identifier = ref.get("$id") if isinstance(ref, dict) else None
+        if identifier:
+            index[identifier] = (ref, [])
+        walk(ref, ref, identifier, [])
+    return index
+
+
+def resolve_ref(reference, base, document, base_path, index, error):
+    """Where a $ref leads: a document, a path from its root, and the resource
+    that path is now inside.
+
+    A "#/pointer" is read from the root of the enclosing **resource**, not
+    from wherever the reference was written, so the resource has to be
+    carried alongside the path rather than inferred from it.
+    """
+    uri, _, fragment = reference.partition("#")
+    if not uri:
+        if fragment.startswith("/") or fragment == "":
+            return (document,
+                    base_path + pointer_segments_at(document, base_path, fragment, error),
+                    base, base_path)
+        key = f"{base or ''}#{fragment}"
+        if key not in index:
+            lost(error, f"{reference} names nothing this run was given")
+        target, target_path = index[key]
+        return target, target_path, base, base_path
+    key = uri
+    if key not in index:
+        lost(error, f"{reference} names nothing this run was given")
+    target, resource_path = index[key]
+    if fragment.startswith("/"):
+        return (target,
+                resource_path + pointer_segments_at(target, resource_path, fragment, error),
+                uri, resource_path)
+    if fragment:
+        anchored = f"{uri}#{fragment}"
+        if anchored not in index:
+            lost(error, f"{reference} names nothing this run was given")
+        target, target_path = index[anchored]
+        return target, target_path, uri, resource_path
+    return target, resource_path, uri, resource_path
+
+
+def pointer_segments_at(document, prefix, pointer, error):
+    """A pointer read from a subschema rather than from the document root."""
+    node = document
+    for step in prefix:
+        node = node[step]
+    try:
+        return pointer_segments(node, pointer)
+    except (KeyError, IndexError, TypeError, ValueError):
+        lost(error, f"{pointer} points nowhere below {prefix}")
+
+
+def rule_location(error, schema, index):
+    """Where the failing keyword lives: which document, and where in it.
 
     A finding has to be traceable to the rule that produced it, and the
     library does not report one: python-jsonschema follows a $ref without
@@ -444,44 +533,41 @@ def rule_location(error, schema, registry):
     stops there -- for a keyword inside a definition applied by reference it
     describes a place the keyword is not. The route is walked here instead,
     resolving a $ref wherever the path continues into something the current
-    node does not contain, so what comes back is where the keyword actually
-    sits. `resource` is None for the schema given on the command line, and
-    the $id of the --ref file otherwise.
+    node does not contain.
     """
-    document, resource, segments, node = schema, None, [], schema
+    document, base, base_path = schema, None, []
+    segments, node = [], schema
     for segment in error.absolute_schema_path:
         depth = 0
         while (isinstance(node, dict) and "$ref" in node
                and segment not in node and depth < MAX_REF_DEPTH):
-            uri, _, pointer = node["$ref"].partition("#")
-            if uri:
-                try:
-                    document = registry.contents(uri)
-                except Exception:
-                    lost(error, f"nothing is registered under {uri}")
-                resource = uri
-            try:
-                segments = pointer_segments(document, pointer)
-                node = document
-                for step in segments:
-                    node = node[step]
-            except (KeyError, IndexError, TypeError, ValueError):
-                lost(error, f"{node['$ref']} points nowhere in {resource or COMMAND_LINE_SCHEMA}")
+            document, segments, base, base_path = resolve_ref(
+                node["$ref"], base, document, base_path, index, error)
+            node = document
+            for step in segments:
+                node = node[step]
             depth += 1
         try:
             node = node[segment]
         except (KeyError, IndexError, TypeError):
             lost(error, f"the path leaves the schema at {segment!r}")
         segments = segments + [segment]
-    return {"resource": resource, "path": segments}
+    return {"document": document_name(document, schema, index), "path": segments}
 
 
-def clause_of(error, schema, registry):
-    return rule_location(error, schema, registry)["path"]
+def document_name(document, schema, index):
+    """None for the schema given on the command line, its $id otherwise."""
+    if document is schema:
+        return None
+    return document.get("$id") if isinstance(document, dict) else None
 
 
-def resource_of(error, schema, registry):
-    return rule_location(error, schema, registry)["resource"]
+def clause_of(error, schema, index):
+    return rule_location(error, schema, index)["path"]
+
+
+def document_of(error, schema, index):
+    return rule_location(error, schema, index)["document"]
 
 
 def with_prefix(errors, site_prefix, clause_prefix):
@@ -503,7 +589,7 @@ def with_prefix(errors, site_prefix, clause_prefix):
     return errors
 
 
-def contains_rejections(error, validator, schema, instance, registry):
+def contains_rejections(error, validator, schema, instance, index):
     """Why each element failed the schema "contains" asked for.
 
     python-jsonschema gives a contains failure no context: it counts matches
@@ -519,37 +605,37 @@ def contains_rejections(error, validator, schema, instance, registry):
     if not isinstance(error.instance, list):
         return []
     subschema = validator.evolve(schema=error.validator_value)
-    clause = clause_of(error, schema, registry)
+    clause = clause_of(error, schema, index)
     site = list(error.absolute_path)
     rejections = []
     for index, item in enumerate(error.instance):
         errors = with_prefix(
             errors_from(sorted(subschema.iter_errors(item),
                                key=lambda e: list(e.absolute_path)),
-                        error.validator_value, instance, subschema, registry),
+                        error.validator_value, instance, subschema, index),
             site + [index], clause)
         if errors:
             rejections.append({"site": site + [index], "errors": errors})
     return rejections
 
 
-def branch_rejections(error, schema, instance, validator, registry):
+def branch_rejections(error, schema, instance, validator, index):
     """One rejection per branch tried, with the errors that were its grounds.
 
     The branch a context error came from is the first segment of its schema
     path relative to the applicator, which is how python-jsonschema records
     which subschema of anyOf or oneOf produced it.
     """
-    clause = clause_of(error, schema, registry)
+    clause = clause_of(error, schema, index)
     grouped = collections.OrderedDict()
     for cause in error.context or []:
         grouped.setdefault(list(cause.schema_path)[0], []).append(cause)
     return [{"clause": clause + [branch],
-             "errors": errors_from(causes, schema, instance, validator, registry)}
+             "errors": errors_from(causes, schema, instance, validator, index)}
             for branch, causes in grouped.items()]
 
 
-def error_entry(error, schema, instance, seen, validator, registry):
+def error_entry(error, schema, instance, seen, validator, index):
     """One violation, with what was tried beneath it where the clause offered
     more than one way to be satisfied."""
     authored = custom_message(error, schema)
@@ -557,23 +643,23 @@ def error_entry(error, schema, instance, seen, validator, registry):
     entry = {
         "site": list(error.absolute_path),
         "keyword": error.validator,
-        "clause": clause_of(error, schema, registry),
-        "resource": resource_of(error, schema, registry),
+        "clause": clause_of(error, schema, index),
+        "document": document_of(error, schema, index),
         "constraint": constraint,
         "particulars": particulars,
         "message": (interpolate(authored, instance, error.absolute_path)
                     if authored else error.message),
     }
     if error.validator in BRANCHING_KEYWORDS:
-        rejections = (contains_rejections(error, validator, schema, instance, registry)
+        rejections = (contains_rejections(error, validator, schema, instance, index)
                       if error.validator == "contains"
-                      else branch_rejections(error, schema, instance, validator, registry))
+                      else branch_rejections(error, schema, instance, validator, index))
         if rejections:
             entry["rejections"] = rejections
     return entry
 
 
-def errors_from(errors, schema, instance, validator, registry):
+def errors_from(errors, schema, instance, validator, index):
     """The report's errors, one per violation.
 
     A transparent applicator contributes nothing: its conclusion repeats a
@@ -591,14 +677,14 @@ def errors_from(errors, schema, instance, validator, registry):
                 report.append({
                     "site": list(error.absolute_path) + [name],
                     "keyword": error.validator,
-                    "clause": clause_of(error, schema, registry),
-                    "resource": resource_of(error, schema, registry),
+                    "clause": clause_of(error, schema, index),
+                    "document": document_of(error, schema, index),
                     "constraint": {},
                     "particulars": {PARAM_FOR_MEMBER[error.validator]: name},
                     "message": error.message,
                 })
             continue
-        report.append(error_entry(error, schema, instance, seen, validator, registry))
+        report.append(error_entry(error, schema, instance, seen, validator, index))
     return report
 
 
@@ -606,7 +692,7 @@ def tidy(errors):
     """Drop what has nothing to say, throughout the report.
 
     Absent is not unknown here, it is nothing to say: no site means the
-    document as a whole, no resource means the schema given on the command
+    document as a whole, no document means the schema given on the command
     line, and an empty constraint or particulars is a pair of braces a
     reader must look inside to learn was empty.
     """
@@ -616,7 +702,7 @@ def tidy(errors):
         for key, value in entry.items():
             if key == "site" and value == []:
                 continue
-            if key == "resource" and value is None:
+            if key == "document" and value is None:
                 continue
             if key in ("constraint", "particulars") and not value:
                 continue
@@ -663,17 +749,19 @@ def parse_args(argv):
 
 
 def load_ref_resources(paths, ignore_declared):
-    resources = []
+    """The registry entries, and the parsed documents for the clause index."""
+    resources, documents = [], []
     for path in paths:
         contents = load_json(path, "ref schema")
         check_declared_version(contents, path, ignore_declared)
         if not isinstance(contents, dict) or "$id" not in contents:
             die(f"ref schema file {path} has no $id to register it under")
+        documents.append(contents)
         resources.append(
             (contents["$id"],
              Resource.from_contents(contents, default_specification=DRAFT202012))
         )
-    return resources
+    return resources, documents
 
 
 def verdict_lines(errors, schema, instance):
@@ -750,8 +838,9 @@ def main(argv):
     schema = load_json(args.schema, "schema")
     check_declared_version(schema, args.schema, args.ignore_declared_version)
     instance_text = read_instance_text(args.instance)
-    registry = Registry().with_resources(
-        load_ref_resources(args.ref, args.ignore_declared_version))
+    ref_resources, ref_contents = load_ref_resources(
+        args.ref, args.ignore_declared_version)
+    registry = Registry().with_resources(ref_resources)
 
     try:
         Draft202012Validator.check_schema(schema)
@@ -768,6 +857,7 @@ def main(argv):
     # $ref targets are resolved lazily, during validation rather than by
     # check_schema, so an unresolvable one surfaces here and must be reported
     # as an error (exit 2) rather than as an invalid instance.
+    index = index_documents(schema, ref_contents)
     validator = Draft202012Validator(schema, registry=registry)
     try:
         errors = sorted(validator.iter_errors(instance),
@@ -778,8 +868,7 @@ def main(argv):
         return emit(args, True, [], [])
     return emit(args, False,
                 verdict_lines(errors, schema, instance),
-                tidy(errors_from(errors, schema, instance,
-                                     validator, registry)))
+                tidy(errors_from(errors, schema, instance, validator, index)))
 
 
 if __name__ == "__main__":

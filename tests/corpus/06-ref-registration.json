@@ -84,7 +84,7 @@
               "clause": [
                 "required"
               ],
-              "resource": "https://example.org/component",
+              "document": "https://example.org/component",
               "particulars": {
                 "missingProperty": "id"
               }
@@ -192,7 +192,7 @@
               "clause": [
                 "required"
               ],
-              "resource": "https://example.org/base",
+              "document": "https://example.org/base",
               "particulars": {
                 "missingProperty": "id"
               }
@@ -277,9 +277,113 @@
                 "tag",
                 "pattern"
               ],
-              "resource": "https://example.org/component",
+              "document": "https://example.org/component",
               "constraint": {
                 "pattern": "^[a-z]+$"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "an $anchor names a subschema without making it a resource",
+      "description": "A $ref to \"#name\" resolves by anchor rather than by pointer. The clause is still reported as a path from the root of the document the caller gave, since that is the file a reader has open.",
+      "schema": {
+        "$defs": {
+          "named": {
+            "$anchor": "named",
+            "properties": {
+              "a": {
+                "type": "number"
+              }
+            }
+          }
+        },
+        "$ref": "#named"
+      },
+      "instance": {
+        "a": "hello"
+      },
+      "expect": {
+        "exit": 1,
+        "stdout": {
+          "jsonschema-validate": [
+            "INVALID: /a: 'hello' is not of type 'number'"
+          ],
+          "ajv-validate": [
+            "INVALID: /a: must be number"
+          ]
+        },
+        "report": {
+          "valid": false,
+          "errors": [
+            {
+              "site": [
+                "a"
+              ],
+              "keyword": "type",
+              "clause": [
+                "$defs",
+                "named",
+                "properties",
+                "a",
+                "type"
+              ],
+              "constraint": {
+                "type": "number"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "an $id on a subschema is a resource inside the document that carries it",
+      "description": "An embedded $id makes a subschema addressable, and a $ref by that URI resolves to it without any file being registered. The clause is reported from the root of the command-line schema rather than from the embedded resource, so a reader can find it without first locating the $id.",
+      "schema": {
+        "$defs": {
+          "named": {
+            "$id": "https://example.org/named",
+            "properties": {
+              "a": {
+                "type": "number"
+              }
+            }
+          }
+        },
+        "$ref": "https://example.org/named"
+      },
+      "instance": {
+        "a": "hello"
+      },
+      "expect": {
+        "exit": 1,
+        "stdout": {
+          "jsonschema-validate": [
+            "INVALID: /a: 'hello' is not of type 'number'"
+          ],
+          "ajv-validate": [
+            "INVALID: /a: must be number"
+          ]
+        },
+        "report": {
+          "valid": false,
+          "errors": [
+            {
+              "site": [
+                "a"
+              ],
+              "keyword": "type",
+              "clause": [
+                "$defs",
+                "named",
+                "properties",
+                "a",
+                "type"
+              ],
+              "constraint": {
+                "type": "number"
               }
             }
           ]

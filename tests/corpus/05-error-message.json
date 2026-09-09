@@ -296,7 +296,7 @@
               "clause": [
                 "enum"
               ],
-              "resource": "https://example.org/flavor.json",
+              "document": "https://example.org/flavor.json",
               "constraint": {
                 "allowedValues": [
                   "vanilla",

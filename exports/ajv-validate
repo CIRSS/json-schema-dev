@@ -145,40 +145,76 @@ function pathSegments(instancePath, instance) {
   return segments;
 }
 
-// Where the failing keyword lives, as a resource and a path into it.
-// Ajv renders this as one string, joining the resource to the pointer with
-// no separator -- "#/properties/x/enum" for the schema given on the command
-// line, "https://example.org/flavor.json/enum" for a --ref file -- so the
-// two parts are recovered by matching against the $ids actually registered.
-// The pointer is typed the same way an instance path is, a schema having
-// both arrays and objects in it: "anyOf/0" indexes a list where
-// "properties/anyOf" names a member.
-function ruleLocation(schemaPath, schema, refSchemas) {
-  if (schemaPath.startsWith('#')) {
-    return { resource: null, path: pathSegments(schemaPath.slice(1), schema) };
+// Every name a $ref can use, mapped to a document and a path into it.
+//
+// A schema names parts of itself two ways: an $id on a subschema, which
+// makes it a resource in its own right, and an $anchor, which names a spot
+// without making one. Both are navigation aids rather than report
+// coordinates: a clause is always reported as a path from the root of a
+// document the caller handed over, because that is the file a reader has.
+function indexDocuments(schema, refSchemas) {
+  const index = new Map();
+
+  const walk = (node, document, base, path) => {
+    if (Array.isArray(node)) {
+      node.forEach((item, i) => walk(item, document, base, [...path, i]));
+      return;
+    }
+    if (node === null || typeof node !== 'object') return;
+    if (typeof node.$id === 'string' && path.length) {
+      base = node.$id;
+      index.set(node.$id, { document, path });
+    }
+    if (typeof node.$anchor === 'string') {
+      index.set(`${base ?? ''}#${node.$anchor}`, { document, path });
+    }
+    for (const [key, item] of Object.entries(node)) {
+      walk(item, document, base, [...path, key]);
+    }
+  };
+
+  index.set('#', { document: schema, path: [] });
+  walk(schema, schema, null, []);
+  for (const ref of refSchemas) {
+    if (ref.$id) index.set(ref.$id, { document: ref, path: [] });
+    walk(ref, ref, ref.$id ?? null, []);
   }
-  // The separator is a "#" where the $ref carried a fragment and nothing at
-  // all where it did not, so both forms are accepted. The schema given on
-  // the command line is the null resource even when it has an $id of its
-  // own, so that naming it and not naming it describe the same place.
-  const documents = schema?.$id ? { [schema.$id]: schema, ...refSchemas } : refSchemas;
-  for (const [id, contents] of Object.entries(documents)) {
-    if (!schemaPath.startsWith(id)) continue;
-    let pointer = schemaPath.slice(id.length);
-    if (pointer.startsWith('#')) pointer = pointer.slice(1);
-    if (pointer !== '' && !pointer.startsWith('/')) continue;
-    return {
-      resource: id === schema?.$id ? null : id,
-      path: pathSegments(pointer, contents),
-    };
+  return index;
+}
+
+// Where the failing keyword lives, as a document and a path into it.
+//
+// Ajv renders this as one string, joining whatever named the subschema to
+// the path within it -- "#/properties/a/type" for the schema on the command
+// line, "#named/..." for an anchor, "https://example.org/named/..." for an
+// $id whether it sits in a --ref file or inside the main schema. The name is
+// recovered by taking the longest key the index knows, and what follows is
+// the path below it.
+function ruleLocation(schemaPath, schema, index) {
+  let best = null;
+  for (const key of index.keys()) {
+    if (schemaPath !== key
+        && !schemaPath.startsWith(`${key}/`)
+        && !schemaPath.startsWith(`${key}#`)) continue;
+    if (!best || key.length > best.length) best = key;
   }
-  // A clause we cannot locate is a defect in this program, not a verdict:
-  // reporting a plausible partial location would put a place in the report
-  // that the keyword is not at, which is the one thing the report exists to
-  // prevent. So the run stops and says so.
-  die(`cannot locate the keyword that failed: ${schemaPath} names no schema `
-      + 'given on the command line or by --ref');
-  return undefined;
+  if (best === null) {
+    // A clause we cannot locate is a defect in this program, not a verdict:
+    // reporting a plausible partial location would put a place in the report
+    // that the keyword is not at, which is the one thing the report exists
+    // to prevent. So the run stops and says so.
+    die(`cannot locate the keyword that failed: ${schemaPath} names nothing `
+        + 'this run was given');
+  }
+  const { document, path } = index.get(best);
+  let rest = schemaPath.slice(best.length);
+  if (rest.startsWith('#')) rest = rest.slice(1);
+  let node = document;
+  for (const step of path) node = node[step];
+  return {
+    document: document === schema ? null : (document.$id ?? null),
+    path: [...path, ...pathSegments(rest, node)],
+  };
 }
 
 // ajv-errors replaces the errors an authored errorMessage covers with one
@@ -226,7 +262,7 @@ const CONSTRAINT_PARAMS = new Set([
   'limit', 'minContains',
 ]);
 
-function errorEntry(err, instance, schema, refSchemas) {
+function errorEntry(err, instance, schema, index) {
   const params = { ...err.params };
   delete params.errors;
   const constraint = {};
@@ -234,12 +270,12 @@ function errorEntry(err, instance, schema, refSchemas) {
   for (const [key, value] of Object.entries(params)) {
     (CONSTRAINT_PARAMS.has(key) ? constraint : particulars)[key] = value;
   }
-  const rule = ruleLocation(err.schemaPath, schema, refSchemas);
+  const rule = ruleLocation(err.schemaPath, schema, index);
   const entry = {
     site: pathSegments(err.instancePath, instance),
     keyword: err.keyword,
     clause: rule.path,
-    resource: rule.resource,
+    document: rule.document,
     constraint,
     particulars,
     message: err.message,
@@ -266,12 +302,12 @@ function branchOf(cause, conclusion, instance) {
   return /^[0-9]+$/.test(first) ? Number(first) : first;
 }
 
-function errorsFrom(rawErrors, instance, schema, refSchemas) {
+function errorsFrom(rawErrors, instance, schema, index) {
   const errors = unwrapAuthoredMessages(rawErrors)
     .filter((err) => !TRANSPARENT_KEYWORDS.has(err.keyword));
   const conclusions = errors.filter((err) => BRANCHING_KEYWORDS.has(err.keyword));
   const entries = new Map();
-  for (const err of errors) entries.set(err, errorEntry(err, instance, schema, refSchemas));
+  for (const err of errors) entries.set(err, errorEntry(err, instance, schema, index));
 
   const top = [];
   for (const err of errors) {
@@ -297,7 +333,7 @@ function errorsFrom(rawErrors, instance, schema, refSchemas) {
 
 // Drop what has nothing to say, throughout the report. Absent is not
 // unknown here, it is nothing to say: no site means the document as a
-// whole, no resource means the schema given on the command line, and an
+// whole, no document means the schema given on the command line, and an
 // empty constraint or particulars is a pair of braces a reader must look
 // inside to learn was empty. `branch` is scaffolding for the grouping above
 // and never reaches the file.
@@ -306,7 +342,7 @@ function tidy(errors) {
     const pruned = {};
     for (const [key, value] of Object.entries(entry)) {
       if (key === 'site' && value.length === 0) continue;
-      if (key === 'resource' && value === null) continue;
+      if (key === 'document' && value === null) continue;
       if ((key === 'constraint' || key === 'particulars')
           && Object.keys(value).length === 0) continue;
       if (key === 'branch') continue;
@@ -558,7 +594,8 @@ function main() {
     return loc === '/' ? `INVALID: ${err.message}` : `INVALID: ${loc}: ${err.message}`;
   });
   return emit(opts, false, lines,
-              tidy(errorsFrom(validate.errors, instance, schema, refSchemas)));
+              tidy(errorsFrom(validate.errors, instance, schema,
+                              indexDocuments(schema, Object.values(refSchemas)))));
 }
 
 process.exit(main());

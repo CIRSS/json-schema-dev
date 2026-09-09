@@ -80,13 +80,15 @@ Every run produces a report, so a valid instance gives `{"valid": true, "errors"
 | `site` | where in the instance, as segments — `["@graph", 0]` distinguishes an index from a member name, and a member named `a/b` needs no escape |
 | `keyword` | the keyword that failed |
 | `clause` | where that keyword lives in the schema, as segments, resolved through any `$ref` that led to it |
-| `resource` | which schema the clause is in, by its `$id` |
+| `document` | which of the schemas you supplied the clause is in, by its `$id` |
 | `constraint` | what the schema demanded — `allowedValues`, `limit`, `pattern` |
 | `particulars` | what specifically went wrong — `missingProperty`, `additionalProperty`, the two indexes of a duplicate |
 | `message` | the library's wording, or an authored `errorMessage` where one covers the failure |
 | `rejections` | on a branching clause: what was tried, and why each was refused |
 
-**Absent is not unknown; it is nothing to say.** No `site` means the document as a whole. No `resource` means the schema given on the command line. An empty `constraint` or `particulars` is omitted rather than written as a pair of braces. Across the keywords implemented, `constraint` and `particulars` never both appear: a keyword reports one kind or the other.
+**Absent is not unknown; it is nothing to say.** No `site` means the document as a whole. No `document` means the schema given on the command line. An empty `constraint` or `particulars` is omitted rather than written as a pair of braces. Across the keywords implemented, `constraint` and `particulars` never both appear: a keyword reports one kind or the other.
+
+**A clause is always a path from the root of a document the caller supplied** — the command-line schema, or a `--ref` file. A subschema may name itself with an `$id`, making it a resource in its own right, or with an `$anchor`; both are navigation the wrapper does and neither appears in a report, because the file a reader has open is the one they were handed.
 
 **Locations are segments rather than JSON Pointers**, because a rendered pointer cannot distinguish an array index from a member named `0`, and is ambiguous about a member whose name contains `/` or `~`. That ambiguity is harmless to a reader who has the document open and fatal to a program that does not, which is the consumer this form is for.
 
@@ -100,7 +102,7 @@ Every run produces a report, so a valid instance gives `{"valid": true, "errors"
 
 The parse tier appears in the report too, since exit status and `valid` must agree: a document that does not parse is one entry with the keyword `parse`, and `--reject-duplicate-members` produces one with the keyword `duplicateMember` per repeated name.
 
-**A known limitation:** a report cannot be traced back to the files the run was given. `resource` names a schema by its `$id`, which is the same in every run, where a path is a fact about one run on one machine — and comparability between runs is what the cross-validation rests on.
+**A known limitation:** a report cannot be traced back to the files the run was given. `document` names a schema by its `$id`, which is the same in every run, where a path is a fact about one run on one machine — and comparability between runs is what the cross-validation rests on.
 
 ### What must agree, and what need not
 
