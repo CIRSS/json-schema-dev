@@ -34,34 +34,28 @@
         },
         "report": {
           "valid": false,
-          "findings": [
+          "errors": [
             {
-              "path": [
+              "site": [
                 "note"
               ],
               "keyword": "additionalProperties",
-              "rule": {
-                "resource": null,
-                "path": [
-                  "additionalProperties"
-                ]
-              },
-              "params": {
+              "clause": [
+                "additionalProperties"
+              ],
+              "particulars": {
                 "additionalProperty": "note"
               }
             },
             {
-              "path": [
+              "site": [
                 "draft"
               ],
               "keyword": "additionalProperties",
-              "rule": {
-                "resource": null,
-                "path": [
-                  "additionalProperties"
-                ]
-              },
-              "params": {
+              "clause": [
+                "additionalProperties"
+              ],
+              "particulars": {
                 "additionalProperty": "draft"
               }
             }
@@ -105,34 +99,28 @@
         },
         "report": {
           "valid": false,
-          "findings": [
+          "errors": [
             {
-              "path": [
+              "site": [
                 "note"
               ],
               "keyword": "unevaluatedProperties",
-              "rule": {
-                "resource": null,
-                "path": [
-                  "unevaluatedProperties"
-                ]
-              },
-              "params": {
+              "clause": [
+                "unevaluatedProperties"
+              ],
+              "particulars": {
                 "unevaluatedProperty": "note"
               }
             },
             {
-              "path": [
+              "site": [
                 "draft"
               ],
               "keyword": "unevaluatedProperties",
-              "rule": {
-                "resource": null,
-                "path": [
-                  "unevaluatedProperties"
-                ]
-              },
-              "params": {
+              "clause": [
+                "unevaluatedProperties"
+              ],
+              "particulars": {
                 "unevaluatedProperty": "draft"
               }
             }
@@ -164,30 +152,22 @@
         },
         "report": {
           "valid": false,
-          "findings": [
+          "errors": [
             {
-              "path": [],
               "keyword": "required",
-              "rule": {
-                "resource": null,
-                "path": [
-                  "required"
-                ]
-              },
-              "params": {
+              "clause": [
+                "required"
+              ],
+              "particulars": {
                 "missingProperty": "a"
               }
             },
             {
-              "path": [],
               "keyword": "required",
-              "rule": {
-                "resource": null,
-                "path": [
-                  "required"
-                ]
-              },
-              "params": {
+              "clause": [
+                "required"
+              ],
+              "particulars": {
                 "missingProperty": "b"
               }
             }
@@ -221,17 +201,13 @@
         },
         "report": {
           "valid": false,
-          "findings": [
+          "errors": [
             {
-              "path": [],
               "keyword": "enum",
-              "rule": {
-                "resource": null,
-                "path": [
-                  "enum"
-                ]
-              },
-              "params": {
+              "clause": [
+                "enum"
+              ],
+              "constraint": {
                 "allowedValues": [
                   "draft",
                   "final"
@@ -262,17 +238,13 @@
         },
         "report": {
           "valid": false,
-          "findings": [
+          "errors": [
             {
-              "path": [],
               "keyword": "maxLength",
-              "rule": {
-                "resource": null,
-                "path": [
-                  "maxLength"
-                ]
-              },
-              "params": {
+              "clause": [
+                "maxLength"
+              ],
+              "constraint": {
                 "limit": 5
               }
             }
@@ -299,17 +271,13 @@
         },
         "report": {
           "valid": false,
-          "findings": [
+          "errors": [
             {
-              "path": [],
               "keyword": "type",
-              "rule": {
-                "resource": null,
-                "path": [
-                  "type"
-                ]
-              },
-              "params": {
+              "clause": [
+                "type"
+              ],
+              "constraint": {
                 "type": "object"
               }
             }

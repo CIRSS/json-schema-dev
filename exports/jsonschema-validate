@@ -149,14 +149,14 @@ def parse_instance(text, reject_duplicates):
         instance = json.loads(
             text, object_pairs_hook=note_duplicates if reject_duplicates else None)
     except json.JSONDecodeError as e:
-        return None, [{"path": [], "keyword": "parse", "params": {},
+        return None, [{"keyword": "parse",
                        "message": f"instance is not valid JSON: {e}"}]
     if duplicates:
         # ensure_ascii=False so a non-ASCII name prints byte-identically with
         # ajv-validate's JSON.stringify, keeping the line cross-validated.
         return instance, [
-            {"path": [], "keyword": "duplicateMember",
-             "params": {"memberName": name},
+            {"keyword": "duplicateMember",
+             "particulars": {"memberName": name},
              "message": "instance contains duplicate member name "
                         f"{json.dumps(name, ensure_ascii=False)}"}
             for name in sorted(duplicates)
@@ -301,6 +301,23 @@ VALUE_PARAM = {
     "maxItems": "limit", "minItems": "limit",
     "maxProperties": "limit", "minProperties": "limit",
 }
+
+
+# Which of a keyword's params state what the schema demanded, as against
+# the particulars of the violation. Across every keyword handled here the
+# two never both apply -- a keyword reports one kind or the other -- so the
+# split works out as a tag on which kind this keyword carries.
+CONSTRAINT_PARAMS = frozenset({
+    "allowedValues", "allowedValue", "type", "pattern", "multipleOf",
+    "limit", "minContains",
+})
+
+
+def split_params(error, seen):
+    """The keyword's demand and the violation's particulars, separately."""
+    params = offender_params(error, seen)
+    return ({k: v for k, v in params.items() if k in CONSTRAINT_PARAMS},
+            {k: v for k, v in params.items() if k not in CONSTRAINT_PARAMS})
 
 
 def offender_params(error, seen):
@@ -450,22 +467,34 @@ def rule_location(error, schema, registry):
     return {"resource": resource, "path": segments}
 
 
-def prefix_paths(findings, instance_prefix, rule_prefix):
-    """Re-root findings computed against a subschema in their own right.
+def clause_of(error, schema, registry):
+    return rule_location(error, schema, registry)["path"]
 
-    A recomputed cause knows where it sits inside the subschema it was
-    checked against, and nothing about where that subschema sits. Both of
-    its locations therefore need the enclosing keyword's own locations in
-    front of them.
+
+def resource_of(error, schema, registry):
+    return rule_location(error, schema, registry)["resource"]
+
+
+def with_prefix(errors, site_prefix, clause_prefix):
+    """Re-root errors computed against a subschema in their own right.
+
+    A recomputed error knows where it sits inside the subschema it was
+    checked against, and nothing about where that subschema sits, so both
+    of its locations need the enclosing keyword's own in front of them.
     """
-    for finding in findings:
-        finding["path"] = list(instance_prefix) + finding["path"]
-        finding["rule"]["path"] = list(rule_prefix) + finding["rule"]["path"]
-        prefix_paths(finding.get("causes", []), instance_prefix, rule_prefix)
-    return findings
+    for entry in errors:
+        entry["site"] = list(site_prefix) + entry["site"]
+        entry["clause"] = list(clause_prefix) + entry["clause"]
+        for rejection in entry.get("rejections", []):
+            if "clause" in rejection:
+                rejection["clause"] = list(clause_prefix) + rejection["clause"]
+            if "site" in rejection:
+                rejection["site"] = list(site_prefix) + rejection["site"]
+            with_prefix(rejection["errors"], site_prefix, clause_prefix)
+    return errors
 
 
-def contains_causes(error, validator, schema, instance, registry):
+def contains_rejections(error, validator, schema, instance, registry):
     """Why each element failed the schema "contains" asked for.
 
     python-jsonschema gives a contains failure no context: it counts matches
@@ -474,66 +503,119 @@ def contains_causes(error, validator, schema, instance, registry):
     recomputed here -- by evolving the root validator, which keeps the
     resolution scope, so a $ref inside the subschema still resolves against
     the document it was written in.
+
+    Each element is one rejection, since an element that had matched would
+    have satisfied the clause on its own.
     """
     if not isinstance(error.instance, list):
         return []
     subschema = validator.evolve(schema=error.validator_value)
-    rule = rule_location(error, schema, registry)["path"]
-    causes = []
+    clause = clause_of(error, schema, registry)
+    site = list(error.absolute_path)
+    rejections = []
     for index, item in enumerate(error.instance):
-        causes.extend(prefix_paths(
-            findings_from(sorted(subschema.iter_errors(item),
-                                 key=lambda e: list(e.absolute_path)),
-                          error.validator_value, instance, subschema, registry),
-            list(error.absolute_path) + [index], rule))
-    return causes
+        errors = with_prefix(
+            errors_from(sorted(subschema.iter_errors(item),
+                               key=lambda e: list(e.absolute_path)),
+                        error.validator_value, instance, subschema, registry),
+            site + [index], clause)
+        if errors:
+            rejections.append({"site": site + [index], "errors": errors})
+    return rejections
 
 
-def finding_from(error, schema, instance, seen, validator, registry):
-    """One finding, with the reasons behind it where a keyword has any."""
-    message = custom_message(error, schema)
-    finding = {
-        "path": list(error.absolute_path),
+def branch_rejections(error, schema, instance, validator, registry):
+    """One rejection per branch tried, with the errors that were its grounds.
+
+    The branch a context error came from is the first segment of its schema
+    path relative to the applicator, which is how python-jsonschema records
+    which subschema of anyOf or oneOf produced it.
+    """
+    clause = clause_of(error, schema, registry)
+    grouped = collections.OrderedDict()
+    for cause in error.context or []:
+        grouped.setdefault(list(cause.schema_path)[0], []).append(cause)
+    return [{"clause": clause + [branch],
+             "errors": errors_from(causes, schema, instance, validator, registry)}
+            for branch, causes in grouped.items()]
+
+
+def error_entry(error, schema, instance, seen, validator, registry):
+    """One violation, with what was tried beneath it where the clause offered
+    more than one way to be satisfied."""
+    authored = custom_message(error, schema)
+    constraint, particulars = split_params(error, seen)
+    entry = {
+        "site": list(error.absolute_path),
         "keyword": error.validator,
-        "rule": rule_location(error, schema, registry),
-        "params": offender_params(error, seen),
-        "message": (interpolate(message, instance, error.absolute_path)
-                    if message else error.message),
+        "clause": clause_of(error, schema, registry),
+        "resource": resource_of(error, schema, registry),
+        "constraint": constraint,
+        "particulars": particulars,
+        "message": (interpolate(authored, instance, error.absolute_path)
+                    if authored else error.message),
     }
     if error.validator in BRANCHING_KEYWORDS:
-        causes = (contains_causes(error, validator, schema, instance, registry)
-                  if error.validator == "contains"
-                  else findings_from(error.context or [], schema, instance,
-                                     validator, registry))
-        if causes:
-            finding["causes"] = causes
-    return finding
+        rejections = (contains_rejections(error, validator, schema, instance, registry)
+                      if error.validator == "contains"
+                      else branch_rejections(error, schema, instance, validator, registry))
+        if rejections:
+            entry["rejections"] = rejections
+    return entry
 
 
-def findings_from(errors, schema, instance, validator, registry):
-    """The findings for a list of errors, innermost detail nested.
+def errors_from(errors, schema, instance, validator, registry):
+    """The report's errors, one per violation.
 
     A transparent applicator contributes nothing: its conclusion repeats a
-    location already reported. "additionalProperties": false contributes one
-    finding per rejected member rather than one naming several.
+    location already reported. A false "additionalProperties" or
+    "unevaluatedProperties" contributes one error per member it rejected,
+    located at that member, rather than one at the parent naming several.
     """
     seen = collections.Counter()
-    findings = []
+    report = []
     for error in errors:
         if error.validator in TRANSPARENT_KEYWORDS:
-            extras = (extra_members(error, validator)
-                      if error.validator in MEMBER_REJECTING else None)
-            for name in extras or []:
-                findings.append({
-                    "path": list(error.absolute_path) + [name],
+            rejected = (extra_members(error, validator)
+                        if error.validator in MEMBER_REJECTING else None)
+            for name in rejected or []:
+                report.append({
+                    "site": list(error.absolute_path) + [name],
                     "keyword": error.validator,
-                    "rule": rule_location(error, schema, registry),
-                    "params": {PARAM_FOR_MEMBER[error.validator]: name},
+                    "clause": clause_of(error, schema, registry),
+                    "resource": resource_of(error, schema, registry),
+                    "constraint": {},
+                    "particulars": {PARAM_FOR_MEMBER[error.validator]: name},
                     "message": error.message,
                 })
             continue
-        findings.append(finding_from(error, schema, instance, seen, validator, registry))
-    return findings
+        report.append(error_entry(error, schema, instance, seen, validator, registry))
+    return report
+
+
+def tidy(errors):
+    """Drop what has nothing to say, throughout the report.
+
+    Absent is not unknown here, it is nothing to say: no site means the
+    document as a whole, no resource means the schema given on the command
+    line, and an empty constraint or particulars is a pair of braces a
+    reader must look inside to learn was empty.
+    """
+    kept = []
+    for entry in errors:
+        pruned = {}
+        for key, value in entry.items():
+            if key == "site" and value == []:
+                continue
+            if key == "resource" and value is None:
+                continue
+            if key in ("constraint", "particulars") and not value:
+                continue
+            if key == "rejections":
+                value = [dict(r, errors=tidy(r["errors"])) for r in value]
+            pruned[key] = value
+        kept.append(pruned)
+    return kept
 
 
 def parse_args(argv):
@@ -615,12 +697,12 @@ def write_output(destination, text):
         die(f"cannot write {destination}: {e.strerror}")
 
 
-def emit(args, valid, lines, findings):
+def emit(args, valid, lines, errors):
     if args.text:
         write_output(args.text, "".join(f"{line}\n"
                                         for line in (["VALID"] if valid else lines)))
     if args.json:
-        report = {"valid": valid, "findings": findings}
+        report = {"valid": valid, "errors": errors}
         write_output(args.json,
                      json.dumps(report, indent=2, ensure_ascii=False) + "\n")
     return EXIT_VALID if valid else EXIT_INVALID
@@ -659,7 +741,8 @@ def main(argv):
         return emit(args, True, [], [])
     return emit(args, False,
                 verdict_lines(errors, schema, instance),
-                findings_from(errors, schema, instance, validator, registry))
+                tidy(errors_from(errors, schema, instance,
+                                     validator, registry)))
 
 
 if __name__ == "__main__":

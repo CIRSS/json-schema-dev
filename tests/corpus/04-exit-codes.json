@@ -20,7 +20,7 @@
         ],
         "report": {
           "valid": true,
-          "findings": []
+          "errors": []
         }
       }
     },
@@ -45,17 +45,13 @@
         },
         "report": {
           "valid": false,
-          "findings": [
+          "errors": [
             {
-              "path": [],
               "keyword": "required",
-              "rule": {
-                "resource": null,
-                "path": [
-                  "required"
-                ]
-              },
-              "params": {
+              "clause": [
+                "required"
+              ],
+              "particulars": {
                 "missingProperty": "id"
               }
             }
@@ -80,11 +76,9 @@
         },
         "report": {
           "valid": false,
-          "findings": [
+          "errors": [
             {
-              "path": [],
-              "keyword": "parse",
-              "params": {}
+              "keyword": "parse"
             }
           ]
         }

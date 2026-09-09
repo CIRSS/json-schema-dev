@@ -211,41 +211,105 @@ function enclosingConclusion(err, conclusions) {
   return nearest;
 }
 
-function findingOf(err, instance, schema, refSchemas) {
+// Which of a keyword's params state what the schema demanded, as against
+// the particulars of the violation. Across every keyword handled here the
+// two never both apply, so the split works out as a tag on which kind this
+// keyword carries.
+const CONSTRAINT_PARAMS = new Set([
+  'allowedValues', 'allowedValue', 'type', 'pattern', 'multipleOf',
+  'limit', 'minContains',
+]);
+
+function errorEntry(err, instance, schema, refSchemas) {
   const params = { ...err.params };
   delete params.errors;
-  const finding = {
-    path: pathSegments(err.instancePath, instance),
+  const constraint = {};
+  const particulars = {};
+  for (const [key, value] of Object.entries(params)) {
+    (CONSTRAINT_PARAMS.has(key) ? constraint : particulars)[key] = value;
+  }
+  const rule = ruleLocation(err.schemaPath, schema, refSchemas);
+  const entry = {
+    site: pathSegments(err.instancePath, instance),
     keyword: err.keyword,
-    rule: ruleLocation(err.schemaPath, schema, refSchemas),
-    params,
+    clause: rule.path,
+    resource: rule.resource,
+    constraint,
+    particulars,
     message: err.message,
   };
   if (err.keyword === 'additionalProperties' || err.keyword === 'unevaluatedProperties') {
-    const member = params.additionalProperty ?? params.unevaluatedProperty;
-    if (member !== undefined) finding.path = [...finding.path, member];
+    const member = particulars.additionalProperty ?? particulars.unevaluatedProperty;
+    if (member !== undefined) entry.site = [...entry.site, member];
   }
-  return finding;
+  return entry;
 }
 
-function findingsFrom(rawErrors, instance, schema, refSchemas) {
+// Which branch of a conclusion a cause came from. For anyOf and oneOf that
+// is the segment of the schema pointer just past the applicator; for
+// contains it is the element the cause is about, which is in the instance
+// pointer instead -- an element that had matched would have satisfied the
+// clause on its own.
+function branchOf(cause, conclusion, instance) {
+  if (conclusion.keyword === 'contains') {
+    const segments = pathSegments(cause.instancePath, instance);
+    return segments[pathSegments(conclusion.instancePath, instance).length];
+  }
+  const rest = cause.schemaPath.slice(conclusion.schemaPath.length + 1);
+  const first = rest.split('/')[0];
+  return /^[0-9]+$/.test(first) ? Number(first) : first;
+}
+
+function errorsFrom(rawErrors, instance, schema, refSchemas) {
   const errors = unwrapAuthoredMessages(rawErrors)
     .filter((err) => !TRANSPARENT_KEYWORDS.has(err.keyword));
   const conclusions = errors.filter((err) => BRANCHING_KEYWORDS.has(err.keyword));
-  const findings = new Map();
-  for (const err of errors) findings.set(err, findingOf(err, instance, schema, refSchemas));
+  const entries = new Map();
+  for (const err of errors) entries.set(err, errorEntry(err, instance, schema, refSchemas));
 
   const top = [];
   for (const err of errors) {
-    const parent = enclosingConclusion(err, conclusions);
-    if (!parent) {
-      top.push(findings.get(err));
+    const conclusion = enclosingConclusion(err, conclusions);
+    if (!conclusion) {
+      top.push(entries.get(err));
       continue;
     }
-    const owner = findings.get(parent);
-    (owner.causes ??= []).push(findings.get(err));
+    const owner = entries.get(conclusion);
+    const branch = branchOf(err, conclusion, instance);
+    const rejections = (owner.rejections ??= []);
+    let rejection = rejections.find((r) => r.branch === branch);
+    if (!rejection) {
+      rejection = conclusion.keyword === 'contains'
+        ? { branch, site: [...entries.get(conclusion).site, branch], errors: [] }
+        : { branch, clause: [...entries.get(conclusion).clause, branch], errors: [] };
+      rejections.push(rejection);
+    }
+    rejection.errors.push(entries.get(err));
   }
   return top;
+}
+
+// Drop what has nothing to say, throughout the report. Absent is not
+// unknown here, it is nothing to say: no site means the document as a
+// whole, no resource means the schema given on the command line, and an
+// empty constraint or particulars is a pair of braces a reader must look
+// inside to learn was empty. `branch` is scaffolding for the grouping above
+// and never reaches the file.
+function tidy(errors) {
+  return errors.map((entry) => {
+    const pruned = {};
+    for (const [key, value] of Object.entries(entry)) {
+      if (key === 'site' && value.length === 0) continue;
+      if (key === 'resource' && value === null) continue;
+      if ((key === 'constraint' || key === 'particulars')
+          && Object.keys(value).length === 0) continue;
+      if (key === 'branch') continue;
+      pruned[key] = key === 'rejections'
+        ? value.map(({ branch, ...rest }) => ({ ...rest, errors: tidy(rest.errors) }))
+        : value;
+    }
+    return pruned;
+  });
 }
 
 function writeOutput(destination, text) {
@@ -260,12 +324,12 @@ function writeOutput(destination, text) {
   }
 }
 
-function emit(opts, valid, lines, findings) {
+function emit(opts, valid, lines, errors) {
   if (opts.text !== undefined) {
     writeOutput(opts.text, (valid ? ['VALID'] : lines).map((l) => `${l}\n`).join(''));
   }
   if (opts.json !== undefined) {
-    writeOutput(opts.json, `${JSON.stringify({ valid, findings }, null, 2)}\n`);
+    writeOutput(opts.json, `${JSON.stringify({ valid, errors }, null, 2)}\n`);
   }
   return valid ? EXIT_VALID : EXIT_INVALID;
 }
@@ -426,7 +490,7 @@ function main() {
   } catch (e) {
     const message = `instance is not valid JSON: ${e.message}`;
     return emit(opts, false, [`INVALID: ${message}`],
-                [{ path: [], keyword: 'parse', params: {}, message }]);
+                [{ keyword: 'parse', message }]);
   }
 
   // Like the parse verdict above: a duplicate member name is a fact about
@@ -441,7 +505,7 @@ function main() {
         opts, false,
         names.map((name) => `INVALID: instance contains duplicate member name ${JSON.stringify(name)}`),
         names.map((name) => ({
-          path: [], keyword: 'duplicateMember', params: { memberName: name },
+          keyword: 'duplicateMember', particulars: { memberName: name },
           message: `instance contains duplicate member name ${JSON.stringify(name)}`,
         })),
       );
@@ -459,7 +523,7 @@ function main() {
     return loc === '/' ? `INVALID: ${err.message}` : `INVALID: ${loc}: ${err.message}`;
   });
   return emit(opts, false, lines,
-              findingsFrom(validate.errors, instance, schema, refSchemas));
+              tidy(errorsFrom(validate.errors, instance, schema, refSchemas)));
 }
 
 process.exit(main());

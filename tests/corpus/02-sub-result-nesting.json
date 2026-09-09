@@ -29,51 +29,55 @@
         },
         "report": {
           "valid": false,
-          "findings": [
+          "errors": [
             {
-              "path": [],
               "keyword": "contains",
-              "rule": {
-                "resource": null,
-                "path": [
-                  "contains"
-                ]
-              },
-              "params": {
+              "clause": [
+                "contains"
+              ],
+              "constraint": {
                 "minContains": 1
               },
-              "causes": [
+              "rejections": [
                 {
-                  "path": [
+                  "site": [
                     0
                   ],
-                  "keyword": "const",
-                  "rule": {
-                    "resource": null,
-                    "path": [
-                      "contains",
-                      "const"
-                    ]
-                  },
-                  "params": {
-                    "allowedValue": "core"
-                  }
+                  "errors": [
+                    {
+                      "site": [
+                        0
+                      ],
+                      "keyword": "const",
+                      "clause": [
+                        "contains",
+                        "const"
+                      ],
+                      "constraint": {
+                        "allowedValue": "core"
+                      }
+                    }
+                  ]
                 },
                 {
-                  "path": [
+                  "site": [
                     1
                   ],
-                  "keyword": "const",
-                  "rule": {
-                    "resource": null,
-                    "path": [
-                      "contains",
-                      "const"
-                    ]
-                  },
-                  "params": {
-                    "allowedValue": "core"
-                  }
+                  "errors": [
+                    {
+                      "site": [
+                        1
+                      ],
+                      "keyword": "const",
+                      "clause": [
+                        "contains",
+                        "const"
+                      ],
+                      "constraint": {
+                        "allowedValue": "core"
+                      }
+                    }
+                  ]
                 }
               ]
             }
@@ -107,17 +111,13 @@
         },
         "report": {
           "valid": false,
-          "findings": [
+          "errors": [
             {
-              "path": [],
               "keyword": "contains",
-              "rule": {
-                "resource": null,
-                "path": [
-                  "contains"
-                ]
-              },
-              "params": {
+              "clause": [
+                "contains"
+              ],
+              "constraint": {
                 "minContains": 1
               }
             }
@@ -153,47 +153,50 @@
         },
         "report": {
           "valid": false,
-          "findings": [
+          "errors": [
             {
-              "path": [],
               "keyword": "anyOf",
-              "rule": {
-                "resource": null,
-                "path": [
-                  "anyOf"
-                ]
-              },
-              "params": {},
-              "causes": [
+              "clause": [
+                "anyOf"
+              ],
+              "rejections": [
                 {
-                  "path": [],
-                  "keyword": "type",
-                  "rule": {
-                    "resource": null,
-                    "path": [
-                      "anyOf",
-                      0,
-                      "type"
-                    ]
-                  },
-                  "params": {
-                    "type": "number"
-                  }
+                  "clause": [
+                    "anyOf",
+                    0
+                  ],
+                  "errors": [
+                    {
+                      "keyword": "type",
+                      "clause": [
+                        "anyOf",
+                        0,
+                        "type"
+                      ],
+                      "constraint": {
+                        "type": "number"
+                      }
+                    }
+                  ]
                 },
                 {
-                  "path": [],
-                  "keyword": "type",
-                  "rule": {
-                    "resource": null,
-                    "path": [
-                      "anyOf",
-                      1,
-                      "type"
-                    ]
-                  },
-                  "params": {
-                    "type": "boolean"
-                  }
+                  "clause": [
+                    "anyOf",
+                    1
+                  ],
+                  "errors": [
+                    {
+                      "keyword": "type",
+                      "clause": [
+                        "anyOf",
+                        1,
+                        "type"
+                      ],
+                      "constraint": {
+                        "type": "boolean"
+                      }
+                    }
+                  ]
                 }
               ]
             }
@@ -234,49 +237,53 @@
         },
         "report": {
           "valid": false,
-          "findings": [
+          "errors": [
             {
-              "path": [],
               "keyword": "oneOf",
-              "rule": {
-                "resource": null,
-                "path": [
-                  "oneOf"
-                ]
-              },
-              "params": {
+              "clause": [
+                "oneOf"
+              ],
+              "particulars": {
                 "passingSchemas": null
               },
-              "causes": [
+              "rejections": [
                 {
-                  "path": [],
-                  "keyword": "const",
-                  "rule": {
-                    "resource": null,
-                    "path": [
-                      "oneOf",
-                      0,
-                      "const"
-                    ]
-                  },
-                  "params": {
-                    "allowedValue": "draft"
-                  }
+                  "clause": [
+                    "oneOf",
+                    0
+                  ],
+                  "errors": [
+                    {
+                      "keyword": "const",
+                      "clause": [
+                        "oneOf",
+                        0,
+                        "const"
+                      ],
+                      "constraint": {
+                        "allowedValue": "draft"
+                      }
+                    }
+                  ]
                 },
                 {
-                  "path": [],
-                  "keyword": "const",
-                  "rule": {
-                    "resource": null,
-                    "path": [
-                      "oneOf",
-                      1,
-                      "const"
-                    ]
-                  },
-                  "params": {
-                    "allowedValue": "final"
-                  }
+                  "clause": [
+                    "oneOf",
+                    1
+                  ],
+                  "errors": [
+                    {
+                      "keyword": "const",
+                      "clause": [
+                        "oneOf",
+                        1,
+                        "const"
+                      ],
+                      "constraint": {
+                        "allowedValue": "final"
+                      }
+                    }
+                  ]
                 }
               ]
             }
@@ -315,17 +322,13 @@
         },
         "report": {
           "valid": false,
-          "findings": [
+          "errors": [
             {
-              "path": [],
               "keyword": "oneOf",
-              "rule": {
-                "resource": null,
-                "path": [
-                  "oneOf"
-                ]
-              },
-              "params": {
+              "clause": [
+                "oneOf"
+              ],
+              "particulars": {
                 "passingSchemas": [
                   0,
                   1
@@ -372,18 +375,14 @@
         },
         "report": {
           "valid": false,
-          "findings": [
+          "errors": [
             {
-              "path": [],
               "keyword": "required",
-              "rule": {
-                "resource": null,
-                "path": [
-                  "then",
-                  "required"
-                ]
-              },
-              "params": {
+              "clause": [
+                "then",
+                "required"
+              ],
+              "particulars": {
                 "missingProperty": "radius"
               }
             }
@@ -437,18 +436,14 @@
         },
         "report": {
           "valid": false,
-          "findings": [
+          "errors": [
             {
-              "path": [],
               "keyword": "required",
-              "rule": {
-                "resource": null,
-                "path": [
-                  "else",
-                  "required"
-                ]
-              },
-              "params": {
+              "clause": [
+                "else",
+                "required"
+              ],
+              "particulars": {
                 "missingProperty": "side"
               }
             }
@@ -493,34 +488,26 @@
         },
         "report": {
           "valid": false,
-          "findings": [
+          "errors": [
             {
-              "path": [],
               "keyword": "required",
-              "rule": {
-                "resource": null,
-                "path": [
-                  "allOf",
-                  0,
-                  "required"
-                ]
-              },
-              "params": {
+              "clause": [
+                "allOf",
+                0,
+                "required"
+              ],
+              "particulars": {
                 "missingProperty": "a"
               }
             },
             {
-              "path": [],
               "keyword": "required",
-              "rule": {
-                "resource": null,
-                "path": [
-                  "allOf",
-                  1,
-                  "required"
-                ]
-              },
-              "params": {
+              "clause": [
+                "allOf",
+                1,
+                "required"
+              ],
+              "particulars": {
                 "missingProperty": "b"
               }
             }
@@ -549,17 +536,12 @@
         },
         "report": {
           "valid": false,
-          "findings": [
+          "errors": [
             {
-              "path": [],
               "keyword": "not",
-              "rule": {
-                "resource": null,
-                "path": [
-                  "not"
-                ]
-              },
-              "params": {}
+              "clause": [
+                "not"
+              ]
             }
           ]
         }
@@ -592,19 +574,15 @@
         },
         "report": {
           "valid": false,
-          "findings": [
+          "errors": [
             {
-              "path": [],
               "keyword": "required",
-              "rule": {
-                "resource": null,
-                "path": [
-                  "dependentSchemas",
-                  "card",
-                  "required"
-                ]
-              },
-              "params": {
+              "clause": [
+                "dependentSchemas",
+                "card",
+                "required"
+              ],
+              "particulars": {
                 "missingProperty": "billing"
               }
             }
@@ -637,18 +615,14 @@
         },
         "report": {
           "valid": false,
-          "findings": [
+          "errors": [
             {
-              "path": [],
               "keyword": "pattern",
-              "rule": {
-                "resource": null,
-                "path": [
-                  "propertyNames",
-                  "pattern"
-                ]
-              },
-              "params": {
+              "clause": [
+                "propertyNames",
+                "pattern"
+              ],
+              "constraint": {
                 "pattern": "^[a-z]+$"
               }
             }
@@ -689,21 +663,18 @@
         },
         "report": {
           "valid": false,
-          "findings": [
+          "errors": [
             {
-              "path": [
+              "site": [
                 1
               ],
               "keyword": "type",
-              "rule": {
-                "resource": null,
-                "path": [
-                  "prefixItems",
-                  1,
-                  "type"
-                ]
-              },
-              "params": {
+              "clause": [
+                "prefixItems",
+                1,
+                "type"
+              ],
+              "constraint": {
                 "type": "number"
               }
             }
@@ -750,59 +721,69 @@
         },
         "report": {
           "valid": false,
-          "findings": [
+          "errors": [
             {
-              "path": [
+              "site": [
                 "tag"
               ],
               "keyword": "anyOf",
-              "rule": {
-                "resource": null,
-                "path": [
-                  "$defs",
-                  "tagged",
-                  "anyOf"
-                ]
-              },
-              "params": {},
-              "causes": [
+              "clause": [
+                "$defs",
+                "tagged",
+                "anyOf"
+              ],
+              "rejections": [
                 {
-                  "path": [
-                    "tag"
+                  "clause": [
+                    "$defs",
+                    "tagged",
+                    "anyOf",
+                    0
                   ],
-                  "keyword": "const",
-                  "rule": {
-                    "resource": null,
-                    "path": [
-                      "$defs",
-                      "tagged",
-                      "anyOf",
-                      0,
-                      "const"
-                    ]
-                  },
-                  "params": {
-                    "allowedValue": "a"
-                  }
+                  "errors": [
+                    {
+                      "site": [
+                        "tag"
+                      ],
+                      "keyword": "const",
+                      "clause": [
+                        "$defs",
+                        "tagged",
+                        "anyOf",
+                        0,
+                        "const"
+                      ],
+                      "constraint": {
+                        "allowedValue": "a"
+                      }
+                    }
+                  ]
                 },
                 {
-                  "path": [
-                    "tag"
+                  "clause": [
+                    "$defs",
+                    "tagged",
+                    "anyOf",
+                    1
                   ],
-                  "keyword": "const",
-                  "rule": {
-                    "resource": null,
-                    "path": [
-                      "$defs",
-                      "tagged",
-                      "anyOf",
-                      1,
-                      "const"
-                    ]
-                  },
-                  "params": {
-                    "allowedValue": "b"
-                  }
+                  "errors": [
+                    {
+                      "site": [
+                        "tag"
+                      ],
+                      "keyword": "const",
+                      "clause": [
+                        "$defs",
+                        "tagged",
+                        "anyOf",
+                        1,
+                        "const"
+                      ],
+                      "constraint": {
+                        "allowedValue": "b"
+                      }
+                    }
+                  ]
                 }
               ]
             }
@@ -857,67 +838,74 @@
         },
         "report": {
           "valid": false,
-          "findings": [
+          "errors": [
             {
-              "path": [],
               "keyword": "anyOf",
-              "rule": {
-                "resource": null,
-                "path": [
-                  "anyOf"
-                ]
-              },
-              "params": {},
-              "causes": [
+              "clause": [
+                "anyOf"
+              ],
+              "rejections": [
                 {
-                  "path": [],
-                  "keyword": "type",
-                  "rule": {
-                    "resource": null,
-                    "path": [
-                      "anyOf",
-                      0,
-                      "allOf",
-                      0,
-                      "type"
-                    ]
-                  },
-                  "params": {
-                    "type": "object"
-                  }
+                  "clause": [
+                    "anyOf",
+                    0
+                  ],
+                  "errors": [
+                    {
+                      "keyword": "type",
+                      "clause": [
+                        "anyOf",
+                        0,
+                        "allOf",
+                        0,
+                        "type"
+                      ],
+                      "constraint": {
+                        "type": "object"
+                      }
+                    }
+                  ]
                 },
                 {
-                  "path": [],
-                  "keyword": "contains",
-                  "rule": {
-                    "resource": null,
-                    "path": [
-                      "anyOf",
-                      1,
-                      "contains"
-                    ]
-                  },
-                  "params": {
-                    "minContains": 1
-                  },
-                  "causes": [
+                  "clause": [
+                    "anyOf",
+                    1
+                  ],
+                  "errors": [
                     {
-                      "path": [
-                        0
+                      "keyword": "contains",
+                      "clause": [
+                        "anyOf",
+                        1,
+                        "contains"
                       ],
-                      "keyword": "const",
-                      "rule": {
-                        "resource": null,
-                        "path": [
-                          "anyOf",
-                          1,
-                          "contains",
-                          "const"
-                        ]
+                      "constraint": {
+                        "minContains": 1
                       },
-                      "params": {
-                        "allowedValue": "core"
-                      }
+                      "rejections": [
+                        {
+                          "site": [
+                            0
+                          ],
+                          "errors": [
+                            {
+                              "site": [
+                                0
+                              ],
+                              "keyword": "const",
+                              "clause": [
+                                "anyOf",
+                                1,
+                                "contains",
+                                "const"
+                              ],
+                              "constraint": {
+                                "allowedValue": "core"
+                              }
+                            }
+                          ]
+                        }
+                      ]
                     }
                   ]
                 }

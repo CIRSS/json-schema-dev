@@ -20,7 +20,7 @@
         ],
         "report": {
           "valid": true,
-          "findings": []
+          "errors": []
         }
       }
     },
@@ -46,11 +46,10 @@
         ],
         "report": {
           "valid": false,
-          "findings": [
+          "errors": [
             {
-              "path": [],
               "keyword": "duplicateMember",
-              "params": {
+              "particulars": {
                 "memberName": "status"
               }
             }
@@ -75,18 +74,16 @@
         ],
         "report": {
           "valid": false,
-          "findings": [
+          "errors": [
             {
-              "path": [],
               "keyword": "duplicateMember",
-              "params": {
+              "particulars": {
                 "memberName": "a"
               }
             },
             {
-              "path": [],
               "keyword": "duplicateMember",
-              "params": {
+              "particulars": {
                 "memberName": "b"
               }
             }
@@ -109,11 +106,10 @@
         ],
         "report": {
           "valid": false,
-          "findings": [
+          "errors": [
             {
-              "path": [],
               "keyword": "duplicateMember",
-              "params": {
+              "particulars": {
                 "memberName": "x"
               }
             }
@@ -137,11 +133,10 @@
         ],
         "report": {
           "valid": false,
-          "findings": [
+          "errors": [
             {
-              "path": [],
               "keyword": "duplicateMember",
-              "params": {
+              "particulars": {
                 "memberName": "café"
               }
             }
@@ -165,11 +160,10 @@
         ],
         "report": {
           "valid": false,
-          "findings": [
+          "errors": [
             {
-              "path": [],
               "keyword": "duplicateMember",
-              "params": {
+              "particulars": {
                 "memberName": "a"
               }
             }
@@ -192,11 +186,10 @@
         ],
         "report": {
           "valid": false,
-          "findings": [
+          "errors": [
             {
-              "path": [],
               "keyword": "duplicateMember",
-              "params": {
+              "particulars": {
                 "memberName": "id"
               }
             }
@@ -220,7 +213,7 @@
         ],
         "report": {
           "valid": true,
-          "findings": []
+          "errors": []
         }
       }
     },
@@ -279,17 +272,13 @@
         },
         "report": {
           "valid": false,
-          "findings": [
+          "errors": [
             {
-              "path": [],
               "keyword": "required",
-              "rule": {
-                "resource": null,
-                "path": [
-                  "required"
-                ]
-              },
-              "params": {
+              "clause": [
+                "required"
+              ],
+              "particulars": {
                 "missingProperty": "id"
               }
             }
@@ -315,7 +304,7 @@
         ],
         "report": {
           "valid": true,
-          "findings": []
+          "errors": []
         }
       }
     },

@@ -70,29 +70,37 @@ INVALID: <location>: <message>      a failure at a location inside it
 ## The JSON report
 
 ```json
-{ "valid": false, "findings": [ … ] }
+{ "valid": false, "errors": [ … ] }
 ```
 
-Each finding carries:
+Every run produces a report, so a valid instance gives `{"valid": true, "errors": []}`. One entry in `errors` is one violation.
 
 | Field | |
 | --- | --- |
-| `path` | where in the instance, as segments — `[]` is the root, `["@graph", 0]` distinguishes an index from a member name, and a member named `a/b` needs no escape |
+| `site` | where in the instance, as segments — `["@graph", 0]` distinguishes an index from a member name, and a member named `a/b` needs no escape |
 | `keyword` | the keyword that failed |
-| `rule` | where the keyword lives: `{ "resource": null-or-$id, "path": [segments] }`, resolved through any `$ref` that led there |
-| `params` | the identity of what offended — the missing member, the additional member, the allowed values, the limit |
+| `clause` | where that keyword lives in the schema, as segments, resolved through any `$ref` that led to it |
+| `resource` | which schema the clause is in, by its `$id` |
+| `constraint` | what the schema demanded — `allowedValues`, `limit`, `pattern` |
+| `particulars` | what specifically went wrong — `missingProperty`, `additionalProperty`, the two indexes of a duplicate |
 | `message` | the library's wording, or an authored `errorMessage` where one covers the failure |
-| `causes` | present on a branching applicator: the failures behind its conclusion |
+| `rejections` | on a branching clause: what was tried, and why each was refused |
 
-Two rules shape which failures become findings.
+**Absent is not unknown; it is nothing to say.** No `site` means the document as a whole. No `resource` means the schema given on the command line. An empty `constraint` or `particulars` is omitted rather than written as a pair of braces. Across the keywords implemented, `constraint` and `particulars` never both appear: a keyword reports one kind or the other.
 
-**A transparent applicator produces no finding.** `if`/`then`/`else`, `$ref`, `properties`, `items`, `prefixItems`, `propertyNames`, `allOf`, `dependentSchemas`: a conclusion that some subschema failed repeats a location already reported and states nothing about the instance. The finding it enclosed remains traceable to its rule through `rule`.
+**Locations are segments rather than JSON Pointers**, because a rendered pointer cannot distinguish an array index from a member named `0`, and is ambiguous about a member whose name contains `/` or `~`. That ambiguity is harmless to a reader who has the document open and fatal to a program that does not, which is the consumer this form is for.
 
-**A branching applicator produces one finding with its causes beneath it.** `anyOf`, `oneOf`, `contains`, `not`: here the reasons are the only place the detail exists, so dropping them would leave a report saying no alternative matched and never saying why.
+### What becomes an entry
 
-`additionalProperties` and `unevaluatedProperties` produce **one finding per rejected member, located at that member**, rather than one at the parent naming several.
+**A transparent applicator produces none.** `if`/`then`/`else`, `$ref`, `properties`, `items`, `prefixItems`, `propertyNames`, `allOf`, `dependentSchemas`: a conclusion that some subschema failed repeats a location already reported and states nothing about the instance. What it enclosed stays traceable through `clause`.
 
-The parse tier appears in the report too, since exit status and `valid` must agree: a document that does not parse is one finding with the keyword `parse`, and `--reject-duplicate-members` produces one with the keyword `duplicateMember` per repeated name.
+**A branching applicator produces one, with its rejections beneath it.** `anyOf`, `oneOf`, `contains`, `not`. A rejection names who refused — `clause` for a branch of `anyOf` or `oneOf`, `site` for an element `contains` tried — and carries the `errors` that were its grounds. Within one rejection those really are errors and all of them would have to be cleared; **between rejections, clearing any single one satisfies the clause.** That is the whole reason they are not reported as peers of the conclusion: they are not each a fault to fix.
+
+**`additionalProperties` and `unevaluatedProperties` produce one entry per rejected member, located at that member**, rather than one at the parent naming several.
+
+The parse tier appears in the report too, since exit status and `valid` must agree: a document that does not parse is one entry with the keyword `parse`, and `--reject-duplicate-members` produces one with the keyword `duplicateMember` per repeated name.
+
+**A known limitation:** a report cannot be traced back to the files the run was given. `resource` names a schema by its `$id`, which is the same in every run, where a path is a fact about one run on one machine — and comparability between runs is what the cross-validation rests on.
 
 ### What must agree, and what need not
 

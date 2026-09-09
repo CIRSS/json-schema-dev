@@ -36,7 +36,7 @@
         ],
         "report": {
           "valid": true,
-          "findings": []
+          "errors": []
         }
       }
     },
@@ -78,17 +78,14 @@
         },
         "report": {
           "valid": false,
-          "findings": [
+          "errors": [
             {
-              "path": [],
               "keyword": "required",
-              "rule": {
-                "resource": "https://example.org/component",
-                "path": [
-                  "required"
-                ]
-              },
-              "params": {
+              "clause": [
+                "required"
+              ],
+              "resource": "https://example.org/component",
+              "particulars": {
                 "missingProperty": "id"
               }
             }
@@ -189,17 +186,14 @@
         },
         "report": {
           "valid": false,
-          "findings": [
+          "errors": [
             {
-              "path": [],
               "keyword": "required",
-              "rule": {
-                "resource": "https://example.org/base",
-                "path": [
-                  "required"
-                ]
-              },
-              "params": {
+              "clause": [
+                "required"
+              ],
+              "resource": "https://example.org/base",
+              "particulars": {
                 "missingProperty": "id"
               }
             }
@@ -231,7 +225,7 @@
         ],
         "report": {
           "valid": true,
-          "findings": []
+          "errors": []
         }
       }
     },
@@ -272,21 +266,19 @@
         },
         "report": {
           "valid": false,
-          "findings": [
+          "errors": [
             {
-              "path": [
+              "site": [
                 "tag"
               ],
               "keyword": "pattern",
-              "rule": {
-                "resource": "https://example.org/component",
-                "path": [
-                  "$defs",
-                  "tag",
-                  "pattern"
-                ]
-              },
-              "params": {
+              "clause": [
+                "$defs",
+                "tag",
+                "pattern"
+              ],
+              "resource": "https://example.org/component",
+              "constraint": {
                 "pattern": "^[a-z]+$"
               }
             }

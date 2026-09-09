@@ -21,17 +21,13 @@
         },
         "report": {
           "valid": false,
-          "findings": [
+          "errors": [
             {
-              "path": [],
               "keyword": "type",
-              "rule": {
-                "resource": null,
-                "path": [
-                  "type"
-                ]
-              },
-              "params": {
+              "clause": [
+                "type"
+              ],
+              "constraint": {
                 "type": "object"
               }
             }
@@ -63,17 +59,13 @@
         },
         "report": {
           "valid": false,
-          "findings": [
+          "errors": [
             {
-              "path": [],
               "keyword": "required",
-              "rule": {
-                "resource": null,
-                "path": [
-                  "required"
-                ]
-              },
-              "params": {
+              "clause": [
+                "required"
+              ],
+              "particulars": {
                 "missingProperty": "b"
               }
             }
@@ -109,21 +101,18 @@
         },
         "report": {
           "valid": false,
-          "findings": [
+          "errors": [
             {
-              "path": [
+              "site": [
                 "creator"
               ],
               "keyword": "required",
-              "rule": {
-                "resource": null,
-                "path": [
-                  "properties",
-                  "creator",
-                  "required"
-                ]
-              },
-              "params": {
+              "clause": [
+                "properties",
+                "creator",
+                "required"
+              ],
+              "particulars": {
                 "missingProperty": "id"
               }
             }
@@ -155,20 +144,17 @@
         },
         "report": {
           "valid": false,
-          "findings": [
+          "errors": [
             {
-              "path": [
+              "site": [
                 1
               ],
               "keyword": "type",
-              "rule": {
-                "resource": null,
-                "path": [
-                  "items",
-                  "type"
-                ]
-              },
-              "params": {
+              "clause": [
+                "items",
+                "type"
+              ],
+              "constraint": {
                 "type": "number"
               }
             }
@@ -213,26 +199,23 @@
         },
         "report": {
           "valid": false,
-          "findings": [
+          "errors": [
             {
-              "path": [
+              "site": [
                 "records",
                 1,
                 "id"
               ],
               "keyword": "type",
-              "rule": {
-                "resource": null,
-                "path": [
-                  "properties",
-                  "records",
-                  "items",
-                  "properties",
-                  "id",
-                  "type"
-                ]
-              },
-              "params": {
+              "clause": [
+                "properties",
+                "records",
+                "items",
+                "properties",
+                "id",
+                "type"
+              ],
+              "constraint": {
                 "type": "string"
               }
             }
@@ -269,21 +252,18 @@
         },
         "report": {
           "valid": false,
-          "findings": [
+          "errors": [
             {
-              "path": [
+              "site": [
                 ""
               ],
               "keyword": "type",
-              "rule": {
-                "resource": null,
-                "path": [
-                  "properties",
-                  "",
-                  "type"
-                ]
-              },
-              "params": {
+              "clause": [
+                "properties",
+                "",
+                "type"
+              ],
+              "constraint": {
                 "type": "number"
               }
             }
@@ -321,21 +301,18 @@
         },
         "report": {
           "valid": false,
-          "findings": [
+          "errors": [
             {
-              "path": [
+              "site": [
                 "a/b"
               ],
               "keyword": "type",
-              "rule": {
-                "resource": null,
-                "path": [
-                  "properties",
-                  "a/b",
-                  "type"
-                ]
-              },
-              "params": {
+              "clause": [
+                "properties",
+                "a/b",
+                "type"
+              ],
+              "constraint": {
                 "type": "number"
               }
             }
@@ -373,21 +350,18 @@
         },
         "report": {
           "valid": false,
-          "findings": [
+          "errors": [
             {
-              "path": [
+              "site": [
                 "a~b"
               ],
               "keyword": "type",
-              "rule": {
-                "resource": null,
-                "path": [
-                  "properties",
-                  "a~b",
-                  "type"
-                ]
-              },
-              "params": {
+              "clause": [
+                "properties",
+                "a~b",
+                "type"
+              ],
+              "constraint": {
                 "type": "number"
               }
             }
@@ -425,38 +399,32 @@
         },
         "report": {
           "valid": false,
-          "findings": [
+          "errors": [
             {
-              "path": [
+              "site": [
                 "a"
               ],
               "keyword": "type",
-              "rule": {
-                "resource": null,
-                "path": [
-                  "properties",
-                  "a",
-                  "type"
-                ]
-              },
-              "params": {
+              "clause": [
+                "properties",
+                "a",
+                "type"
+              ],
+              "constraint": {
                 "type": "number"
               }
             },
             {
-              "path": [
+              "site": [
                 "b"
               ],
               "keyword": "type",
-              "rule": {
-                "resource": null,
-                "path": [
-                  "properties",
-                  "b",
-                  "type"
-                ]
-              },
-              "params": {
+              "clause": [
+                "properties",
+                "b",
+                "type"
+              ],
+              "constraint": {
                 "type": "number"
               }
             }
