@@ -408,8 +408,8 @@
       }
     },
     {
-      "name": "a relative pointer crashes ajv-validate when the failing keyword is type",
-      "description": "${0} is meant to be the failing value itself, wherever it occurs. It works wherever some other keyword forces Ajv to bind that value to a variable.",
+      "name": "a relative pointer interpolates the failing value itself",
+      "description": "${0} is the failing value, wherever it occurs. Ajv binds it only where some keyword has already forced the value into a variable, which verbose mode does for every error.",
       "schema": {
         "type": "array",
         "items": {
@@ -424,12 +424,9 @@
       "identicalMessages": true,
       "expect": {
         "exit": 1,
-        "stdout": {
-          "jsonschema-validate": [
-            "INVALID: /1: each artifact must be a string; 7 is not"
-          ],
-          "ajv-validate": []
-        },
+        "stdout": [
+          "INVALID: /1: each artifact must be a string; 7 is not"
+        ],
         "report": {
           "valid": false,
           "errors": [
@@ -447,16 +444,7 @@
               }
             }
           ]
-        },
-        "stderrContains": {
-          "jsonschema-validate": "",
-          "ajv-validate": "undefined:3"
         }
-      },
-      "defect": {
-        "summary": "ajv-validate crashes. A relative pointer in a subschema whose failing keyword is `type` makes ajv-errors emit JSON.stringify(dataN) for a variable Ajv's codegen never bound, and the generated validator throws ReferenceError. The crash exits 1 — the INVALID code — with nothing on stdout, so a caller scripting on exit status reads a crash as a verdict.",
-        "should": "The wrapper should catch anything thrown during validation and exit 2, since a crash is a fact about the setup and not about the instance. The underlying ajv-errors incompatibility should be reported upstream; adding any keyword that forces Ajv to bind the value (pattern, for one) is the current workaround.",
-        "divergent": true
       }
     },
     {
@@ -548,7 +536,6 @@
       },
       "defect": {
         "summary": "The two errorMessage implementations disagree on an unresolvable pointer: jsonschema-validate leaves ${/nonexistent/path} in the message as written, and ajv-errors substitutes the text `undefined`.",
-        "should": "The portable subset must pick one behavior and both legs must implement it. Leaving the pointer as written is the honest one — `undefined` asserts a value the instance does not have.",
         "divergent": true
       }
     }

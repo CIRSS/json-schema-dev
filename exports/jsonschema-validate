@@ -310,7 +310,7 @@ VALUE_PARAM = {
 # split works out as a tag on which kind this keyword carries.
 CONSTRAINT_PARAMS = frozenset({
     "allowedValues", "allowedValue", "type", "pattern", "multipleOf",
-    "limit", "minContains",
+    "limit", "minContains", "comparison",
 })
 
 
@@ -319,6 +319,15 @@ def split_params(error, seen):
     params = offender_params(error, seen)
     return ({k: v for k, v in params.items() if k in CONSTRAINT_PARAMS},
             {k: v for k, v in params.items() if k not in CONSTRAINT_PARAMS})
+
+
+# The relation a bound demands, which Ajv states and python-jsonschema
+# leaves to its prose. Naming it lets a consumer word the requirement
+# without parsing "is greater than the maximum of 5" out of a sentence.
+COMPARISON = {
+    "maximum": "<=", "minimum": ">=",
+    "exclusiveMaximum": "<", "exclusiveMinimum": ">",
+}
 
 
 def offender_params(error, seen):
@@ -336,7 +345,10 @@ def offender_params(error, seen):
     """
     keyword, value = error.validator, error.validator_value
     if keyword in VALUE_PARAM:
-        return {VALUE_PARAM[keyword]: value}
+        params = {VALUE_PARAM[keyword]: value}
+        if keyword in COMPARISON:
+            params["comparison"] = COMPARISON[keyword]
+        return params
     if keyword == "required" and isinstance(error.instance, dict):
         # Keyed by where the keyword is as well as where the instance is: two
         # "required" keywords under one allOf fail at the same location, and
@@ -635,15 +647,62 @@ def branch_rejections(error, schema, instance, validator, index):
             for branch, causes in grouped.items()]
 
 
+# The applicators that can hold a boolean subschema and whose failure
+# python-jsonschema reports with no keyword at all.
+BOOLEAN_APPLICATORS = frozenset({"properties", "patternProperties", "prefixItems"})
+
+
+def boolean_member(error, schema, instance, index, seen):
+    """Which member or element a false subschema rejected.
+
+    python-jsonschema extends neither path for a boolean subschema: the error
+    carries the parent's instance path and a schema path stopping at the
+    applicator, so both name a place one level above the failure. The member
+    is recovered here from the applicator and the value the error does carry
+    -- a defect in a library we use is still ours, and reporting the parent
+    would put a location in the report that nothing failed at.
+    """
+    clause = clause_of(error, schema, index)
+    if not clause or clause[-1] not in BOOLEAN_APPLICATORS:
+        lost(error, "a false subschema under an applicator this wrapper does "
+                    f"not know how to locate: {clause}")
+    applicator = clause[-1]
+    node = schema
+    for step in clause:
+        node = node[step]
+    parent = instance
+    for step in error.absolute_path:
+        parent = parent[step]
+    if applicator == "prefixItems":
+        present = [i for i, sub in enumerate(node)
+                   if sub is False and isinstance(parent, list) and i < len(parent)]
+    else:
+        present = [name for name, sub in node.items()
+                   if sub is False and isinstance(parent, dict) and name in parent]
+    key = (tuple(error.absolute_path), tuple(error.absolute_schema_path))
+    index_of = seen[key]
+    seen[key] += 1
+    if index_of >= len(present):
+        lost(error, "more false-subschema failures than the applicator has "
+                    "false members")
+    return present[index_of]
+
+
 def error_entry(error, schema, instance, seen, validator, index):
     """One violation, with what was tried beneath it where the clause offered
     more than one way to be satisfied."""
     authored = custom_message(error, schema)
     constraint, particulars = split_params(error, seen)
+    site, clause = list(error.absolute_path), clause_of(error, schema, index)
+    if error.validator is None and clause:
+        # An empty clause is the whole schema being the boolean, where there
+        # is no member it rejected: the document itself is what failed.
+        member = boolean_member(error, schema, instance, index, seen)
+        site, clause = site + [member], clause + [member]
     entry = {
-        "site": list(error.absolute_path),
+        "site": site,
         "keyword": error.validator,
-        "clause": clause_of(error, schema, index),
+        "clause": clause,
         "document": document_of(error, schema, index),
         "constraint": constraint,
         "particulars": particulars,
@@ -700,6 +759,8 @@ def tidy(errors):
     for entry in errors:
         pruned = {}
         for key, value in entry.items():
+            if key == "keyword" and value is None:
+                continue
             if key == "site" and value == []:
                 continue
             if key == "document" and value is None:

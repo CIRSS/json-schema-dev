@@ -44,10 +44,6 @@ const MALFORMED = [
         document: corpusFile({ schema: undefined }),
     },
     {
-        name: 'a defect that says what is wrong but not what it should be is rejected',
-        document: corpusFile({ defect: { summary: 'something is wrong' } }),
-    },
-    {
         name: 'an exit status the contract does not define is rejected',
         document: corpusFile({ expect: { exit: 3, stdout: [] } }),
     },

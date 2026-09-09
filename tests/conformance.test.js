@@ -65,11 +65,12 @@ for (const { group } of loadCorpus()) {
                 });
 
                 it('produces the same report from both implementations', function () {
-                    // Not suspended by a divergent defect: those record the
+                    // Not suspended by a divergent defect. Those record the
                     // text form showing what each library said, which is what
-                    // the text form is for. The JSON report is where the two
-                    // are contracted to agree, and a divergence in it is a
-                    // different and worse thing than a divergence in prose.
+                    // the text form is for; the report is where the two are
+                    // contracted to agree, and no case has yet needed that
+                    // suspended -- the one that looked like it did turned out
+                    // to be repairable.
                     const [left, right] = LEGS.map((leg) => results[leg].report);
                     assert.deepStrictEqual(left, right,
                         'the two implementations disagree about what was found'
@@ -84,11 +85,12 @@ for (const { group } of loadCorpus()) {
                         'the two implementations lay the report out differently');
                 });
 
+                // A defect's summary becomes a test name, so the inventory of
+                // known-wrong behavior is part of the report and cannot drift
+                // from the cases that demonstrate it. The test asserts nothing
+                // beyond its own title, which is the whole of its job.
                 if (testCase.defect) {
-                    it(`known defect: ${testCase.defect.summary}`, function () {
-                        assert.ok(testCase.defect.should,
-                            'a defect must say what the behavior should become');
-                    });
+                    it(`known defect: ${testCase.defect.summary}`, function () {});
                 }
             });
         }

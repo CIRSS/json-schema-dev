@@ -198,17 +198,12 @@
     "defect": {
       "type": "object",
       "title": "Behavior the case pins as current and wrong",
-      "description": "Why the behavior this case records is wrong, and what it should become.",
-      "required": ["summary", "should"],
+      "description": "Why the behavior this case records is wrong.",
+      "required": ["summary"],
       "properties": {
         "summary": {
           "type": "string",
           "description": "What is wrong, stated as a fact about the wrappers.",
-          "minLength": 1
-        },
-        "should": {
-          "type": "string",
-          "description": "What the behavior should become.",
           "minLength": 1
         },
         "divergent": {

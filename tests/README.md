@@ -66,9 +66,9 @@ The table above is documentation; [`corpus-schema.json`](corpus-schema.json) is 
 
 Both objects are closed (`additionalProperties: false`), so a mistyped key is a verdict rather than a silently ignored field: write `instanceTxt` and the case is rejected instead of running with no instance file.
 
-The schema states two things the table leaves implicit: a case carries **exactly one** form of each document (`oneOf` over `schema`/`schemaText`, and again for the instance, so a case carrying both is rejected rather than resolved by the runner), and a `defect` carries both what is wrong and what it should become.
+The schema states two things the table leaves implicit: a case carries **exactly one** form of each document (`oneOf` over `schema`/`schemaText`, and again for the instance, so a case carrying both is rejected rather than resolved by the runner), and a `defect` says what is wrong.
 
-A schema that accepts everything also accepts every corpus file, so the conformance check establishes nothing on its own. The same test file carries canaries — nine malformations the schema exists to catch, each of which both wrappers must reject: a mistyped field, both instance forms at once, a missing document, a defect with no `should`, an exit status the contract does not define, a per-leg expectation naming a wrapper that does not exist, an empty group, an expectation with no recorded stdout.
+A schema that accepts everything also accepts every corpus file, so the conformance check establishes nothing on its own. The same test file carries canaries — eight malformations the schema exists to catch, each of which both wrappers must reject: a mistyped field, both instance forms at once, a missing document, an exit status the contract does not define, a per-leg expectation naming a wrapper that does not exist, an empty group, an expectation with no recorded stdout.
 
 ## Recording expectations
 
@@ -90,12 +90,11 @@ A case carrying a `defect` pins behavior known to be wrong:
 ```json
 "defect": {
   "summary": "what is wrong",
-  "should": "what the behavior should become",
   "divergent": true
 }
 ```
 
-The `summary` becomes a test name, so the defect inventory appears in the test report. The case's recorded expectations still hold, and repairing the defect breaks them: update the case and delete the `defect` note in the same change.
+The `summary` becomes a test name, so the defect inventory appears in the test report — which is the whole of what the field is for, and why a defect carries no other prose. What to do about one is work, and work is tracked elsewhere. The case's recorded expectations still hold, and repairing the defect breaks them: update the case and delete the `defect` note in the same change.
 
 `divergent` marks a defect that splits the two legs in the text form, and suspends only that case's text-form comparison. A defect both legs share — the root sentinel, for one — leaves them agreeing, so that check still runs. Neither suspends the report comparison, which every case must pass.
 
@@ -107,7 +106,7 @@ In a started REPRO:
 
 1. Write the case with its claim as `name`, its inputs, and a `description` only if the claim leaves something unexplained — no `expect`.
 2. `node tests/record-corpus.js --grep "<part of the claim>"` and read what the wrappers actually do.
-3. Read the diff. Where the recorded behavior is wrong, restate the claim to say what actually happens and add a `defect` saying what it should be.
+3. Read the diff. Where the recorded behavior is wrong, restate the claim to say what actually happens and add a `defect` saying so.
 4. `npm test -- --grep "<part of the claim>"`.
 
 ## What is not covered yet

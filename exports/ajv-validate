@@ -182,6 +182,27 @@ function indexDocuments(schema, refSchemas) {
   return index;
 }
 
+// Every subschema object in every supplied document, by identity, mapped to
+// the document and the path that reaches it. Ajv hands back the very object
+// a keyword sits in, so this locates it exactly rather than by parsing a
+// pointer the library composed.
+function indexSubschemas(schema, refSchemas) {
+  const index = new Map();
+
+  const walk = (node, document, path) => {
+    if (node === null || typeof node !== 'object') return;
+    if (!index.has(node)) index.set(node, { document, path });
+    const entries = Array.isArray(node)
+      ? node.map((item, i) => [i, item])
+      : Object.entries(node);
+    for (const [key, item] of entries) walk(item, document, [...path, key]);
+  };
+
+  walk(schema, schema, []);
+  for (const ref of refSchemas) walk(ref, ref, []);
+  return index;
+}
+
 // Where the failing keyword lives, as a document and a path into it.
 //
 // Ajv renders this as one string, joining whatever named the subschema to
@@ -190,7 +211,31 @@ function indexDocuments(schema, refSchemas) {
 // $id whether it sits in a --ref file or inside the main schema. The name is
 // recovered by taking the longest key the index knows, and what follows is
 // the path below it.
-function ruleLocation(schemaPath, schema, index) {
+// Ajv names a boolean schema's failure "false schema", a keyword no schema
+// contains. There is nothing to name -- the schema is a boolean -- so the
+// report omits the keyword and locates the boolean itself.
+const PSEUDO_KEYWORD = 'false schema';
+
+function ruleLocation(err, schema, index, subschemas) {
+  const found = err.parentSchema !== null && typeof err.parentSchema === 'object'
+    ? subschemas.get(err.parentSchema)
+    : undefined;
+  if (found) {
+    const inside = Object.prototype.hasOwnProperty.call(err.parentSchema, err.keyword);
+    return {
+      document: found.document === schema ? null : (found.document.$id ?? null),
+      path: inside ? [...found.path, err.keyword] : found.path,
+    };
+  }
+  const named = ruleLocationByName(err.schemaPath, schema, index);
+  if (err.keyword === PSEUDO_KEYWORD
+      && named.path[named.path.length - 1] === PSEUDO_KEYWORD) {
+    named.path = named.path.slice(0, -1);
+  }
+  return named;
+}
+
+function ruleLocationByName(schemaPath, schema, index) {
   let best = null;
   for (const key of index.keys()) {
     if (schemaPath !== key
@@ -259,10 +304,10 @@ function enclosingConclusion(err, conclusions) {
 // keyword carries.
 const CONSTRAINT_PARAMS = new Set([
   'allowedValues', 'allowedValue', 'type', 'pattern', 'multipleOf',
-  'limit', 'minContains',
+  'limit', 'minContains', 'comparison',
 ]);
 
-function errorEntry(err, instance, schema, index) {
+function errorEntry(err, instance, schema, index, subschemas) {
   const params = { ...err.params };
   delete params.errors;
   const constraint = {};
@@ -270,10 +315,10 @@ function errorEntry(err, instance, schema, index) {
   for (const [key, value] of Object.entries(params)) {
     (CONSTRAINT_PARAMS.has(key) ? constraint : particulars)[key] = value;
   }
-  const rule = ruleLocation(err.schemaPath, schema, index);
+  const rule = ruleLocation(err, schema, index, subschemas);
   const entry = {
     site: pathSegments(err.instancePath, instance),
-    keyword: err.keyword,
+    keyword: err.keyword === PSEUDO_KEYWORD ? null : err.keyword,
     clause: rule.path,
     document: rule.document,
     constraint,
@@ -302,12 +347,12 @@ function branchOf(cause, conclusion, instance) {
   return /^[0-9]+$/.test(first) ? Number(first) : first;
 }
 
-function errorsFrom(rawErrors, instance, schema, index) {
+function errorsFrom(rawErrors, instance, schema, index, subschemas) {
   const errors = unwrapAuthoredMessages(rawErrors)
     .filter((err) => !TRANSPARENT_KEYWORDS.has(err.keyword));
   const conclusions = errors.filter((err) => BRANCHING_KEYWORDS.has(err.keyword));
   const entries = new Map();
-  for (const err of errors) entries.set(err, errorEntry(err, instance, schema, index));
+  for (const err of errors) entries.set(err, errorEntry(err, instance, schema, index, subschemas));
 
   const top = [];
   for (const err of errors) {
@@ -341,6 +386,7 @@ function tidy(errors) {
   return errors.map((entry) => {
     const pruned = {};
     for (const [key, value] of Object.entries(entry)) {
+      if (key === 'keyword' && value === null) continue;
       if (key === 'site' && value.length === 0) continue;
       if (key === 'document' && value === null) continue;
       if ((key === 'constraint' || key === 'particulars')
@@ -524,7 +570,14 @@ function main() {
   // this wrapper does not load, and misleading when ignoring is all the
   // wrapper ever does. Format assertion, if added, is added to both legs
   // together, as an explicit option.
-  const ajv = new Ajv2020({ allErrors: true, strict: false, validateFormats: false, logger });
+  // verbose attaches parentSchema to every error: the subschema object the
+  // failing keyword sits in. Located by identity that is exact, where Ajv's
+  // own schemaPath is a string it composes -- and one it gets wrong for a
+  // recursive $ref, reporting #/required for a keyword that is nowhere near
+  // the root.
+  const ajv = new Ajv2020({
+    allErrors: true, strict: false, validateFormats: false, verbose: true, logger,
+  });
   ajvErrors(ajv);
   const refSchemas = {};
   for (const path of opts.ref ?? []) {
@@ -595,7 +648,8 @@ function main() {
   });
   return emit(opts, false, lines,
               tidy(errorsFrom(validate.errors, instance, schema,
-                              indexDocuments(schema, Object.values(refSchemas)))));
+                              indexDocuments(schema, Object.values(refSchemas)),
+                              indexSubschemas(schema, Object.values(refSchemas)))));
 }
 
 process.exit(main());

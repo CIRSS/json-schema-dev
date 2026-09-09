@@ -86,7 +86,6 @@
       },
       "defect": {
         "summary": "ajv-validate prints an applicator's sub-results as peers of its conclusion; jsonschema-validate prints the conclusion alone, so the two legs report different numbers of lines.",
-        "should": "In the JSON output form the two families are treated differently. A transparent applicator -- if/then/else, $ref, properties, items, propertyNames -- produces no entry of its own: its conclusion repeats a location already reported and states nothing about the instance. A branching applicator -- anyOf, oneOf, contains, not -- produces one entry with its branch failures nested beneath it, since those are the only place the detail exists. The Python leg reads them from each error's context; the Node leg recovers them from Ajv's flat array by schemaPath prefix, the nearest enclosing conclusion claiming a sub-result, which nests correctly for an applicator inside an applicator.",
         "divergent": true
       }
     },
@@ -205,7 +204,6 @@
       },
       "defect": {
         "summary": "ajv-validate prints an applicator's sub-results as peers of its conclusion; jsonschema-validate prints the conclusion alone, so the two legs report different numbers of lines.",
-        "should": "In the JSON output form the two families are treated differently. A transparent applicator -- if/then/else, $ref, properties, items, propertyNames -- produces no entry of its own: its conclusion repeats a location already reported and states nothing about the instance. A branching applicator -- anyOf, oneOf, contains, not -- produces one entry with its branch failures nested beneath it, since those are the only place the detail exists. The Python leg reads them from each error's context; the Node leg recovers them from Ajv's flat array by schemaPath prefix, the nearest enclosing conclusion claiming a sub-result, which nests correctly for an applicator inside an applicator.",
         "divergent": true
       }
     },
@@ -292,7 +290,6 @@
       },
       "defect": {
         "summary": "ajv-validate prints an applicator's sub-results as peers of its conclusion; jsonschema-validate prints the conclusion alone, so the two legs report different numbers of lines.",
-        "should": "In the JSON output form the two families are treated differently. A transparent applicator -- if/then/else, $ref, properties, items, propertyNames -- produces no entry of its own: its conclusion repeats a location already reported and states nothing about the instance. A branching applicator -- anyOf, oneOf, contains, not -- produces one entry with its branch failures nested beneath it, since those are the only place the detail exists. The Python leg reads them from each error's context; the Node leg recovers them from Ajv's flat array by schemaPath prefix, the nearest enclosing conclusion claiming a sub-result, which nests correctly for an applicator inside an applicator.",
         "divergent": true
       }
     },
@@ -391,7 +388,6 @@
       },
       "defect": {
         "summary": "ajv-validate prints an applicator's sub-results as peers of its conclusion; jsonschema-validate prints the conclusion alone, so the two legs report different numbers of lines.",
-        "should": "In the JSON output form the two families are treated differently. A transparent applicator -- if/then/else, $ref, properties, items, propertyNames -- produces no entry of its own: its conclusion repeats a location already reported and states nothing about the instance. A branching applicator -- anyOf, oneOf, contains, not -- produces one entry with its branch failures nested beneath it, since those are the only place the detail exists. The Python leg reads them from each error's context; the Node leg recovers them from Ajv's flat array by schemaPath prefix, the nearest enclosing conclusion claiming a sub-result, which nests correctly for an applicator inside an applicator.",
         "divergent": true
       }
     },
@@ -452,7 +448,6 @@
       },
       "defect": {
         "summary": "ajv-validate prints an applicator's sub-results as peers of its conclusion; jsonschema-validate prints the conclusion alone, so the two legs report different numbers of lines.",
-        "should": "In the JSON output form the two families are treated differently. A transparent applicator -- if/then/else, $ref, properties, items, propertyNames -- produces no entry of its own: its conclusion repeats a location already reported and states nothing about the instance. A branching applicator -- anyOf, oneOf, contains, not -- produces one entry with its branch failures nested beneath it, since those are the only place the detail exists. The Python leg reads them from each error's context; the Node leg recovers them from Ajv's flat array by schemaPath prefix, the nearest enclosing conclusion claiming a sub-result, which nests correctly for an applicator inside an applicator.",
         "divergent": true
       }
     },
@@ -631,7 +626,6 @@
       },
       "defect": {
         "summary": "ajv-validate prints an applicator's sub-results as peers of its conclusion; jsonschema-validate prints the conclusion alone, so the two legs report different numbers of lines.",
-        "should": "In the JSON output form the two families are treated differently. A transparent applicator -- if/then/else, $ref, properties, items, propertyNames -- produces no entry of its own: its conclusion repeats a location already reported and states nothing about the instance. A branching applicator -- anyOf, oneOf, contains, not -- produces one entry with its branch failures nested beneath it, since those are the only place the detail exists. The Python leg reads them from each error's context; the Node leg recovers them from Ajv's flat array by schemaPath prefix, the nearest enclosing conclusion claiming a sub-result, which nests correctly for an applicator inside an applicator.",
         "divergent": true
       }
     },
@@ -792,7 +786,6 @@
       },
       "defect": {
         "summary": "ajv-validate prints an applicator's sub-results as peers of its conclusion; jsonschema-validate prints the conclusion alone, so the two legs report different numbers of lines.",
-        "should": "In the JSON output form the two families are treated differently. A transparent applicator -- if/then/else, $ref, properties, items, propertyNames -- produces no entry of its own: its conclusion repeats a location already reported and states nothing about the instance. A branching applicator -- anyOf, oneOf, contains, not -- produces one entry with its branch failures nested beneath it, since those are the only place the detail exists. The Python leg reads them from each error's context; the Node leg recovers them from Ajv's flat array by schemaPath prefix, the nearest enclosing conclusion claiming a sub-result, which nests correctly for an applicator inside an applicator.",
         "divergent": true
       }
     },
@@ -916,7 +909,6 @@
       },
       "defect": {
         "summary": "ajv-validate prints an applicator's sub-results as peers of its conclusion; jsonschema-validate prints the conclusion alone, so the two legs report different numbers of lines.",
-        "should": "In the JSON output form the two families are treated differently. A transparent applicator -- if/then/else, $ref, properties, items, propertyNames -- produces no entry of its own: its conclusion repeats a location already reported and states nothing about the instance. A branching applicator -- anyOf, oneOf, contains, not -- produces one entry with its branch failures nested beneath it, since those are the only place the detail exists. The Python leg reads them from each error's context; the Node leg recovers them from Ajv's flat array by schemaPath prefix, the nearest enclosing conclusion claiming a sub-result, which nests correctly for an applicator inside an applicator.",
         "divergent": true
       }
     }

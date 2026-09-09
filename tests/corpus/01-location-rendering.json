@@ -237,8 +237,7 @@
         "": "not a number"
       },
       "defect": {
-        "summary": "The member named \"\" is reported as a root failure, because \"/\" is used as the root sentinel.",
-        "should": "The root is the empty pointer and should be represented as a first-class value, not as the string \"/\"; the member named \"\" should render at \"/\" and be distinguishable from it."
+        "summary": "The member named \"\" is reported as a root failure, because \"/\" is used as the root sentinel."
       },
       "expect": {
         "exit": 1,
@@ -286,7 +285,6 @@
       },
       "defect": {
         "summary": "jsonschema-validate joins path segments with \"/\" without escaping, so \"a/b\" renders as \"/a/b\" and is indistinguishable from a nested member. ajv-validate escapes correctly.",
-        "should": "Both legs should render RFC 6901 pointers with ~0 and ~1 escapes, and should therefore agree.",
         "divergent": true
       },
       "expect": {
@@ -335,7 +333,6 @@
       },
       "defect": {
         "summary": "jsonschema-validate does not escape \"~\", so the rendered pointer is not a valid JSON Pointer for this member.",
-        "should": "Both legs should render RFC 6901 pointers with ~0 and ~1 escapes, and should therefore agree.",
         "divergent": true
       },
       "expect": {
@@ -430,6 +427,74 @@
             }
           ]
         }
+      }
+    },
+    {
+      "name": "a false schema at the root rejects with no keyword to name",
+      "description": "A boolean is a schema. There is no keyword involved, so the report names none and locates the boolean itself.",
+      "schema": false,
+      "instance": {
+        "a": 1
+      },
+      "expect": {
+        "exit": 1,
+        "stdout": {
+          "jsonschema-validate": [
+            "INVALID: False schema does not allow {'a': 1}"
+          ],
+          "ajv-validate": [
+            "INVALID: boolean schema is false"
+          ]
+        },
+        "report": {
+          "valid": false,
+          "errors": [
+            {
+              "clause": []
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "a false subschema is located at the member it rejected",
+      "description": "python-jsonschema extends neither path for a boolean subschema: its error carries the parent's instance path and a schema path stopping at the applicator. The wrapper recovers the member from the applicator and the rejected value, so both legs report the same place.",
+      "schema": {
+        "properties": {
+          "a": false
+        }
+      },
+      "instance": {
+        "a": 1
+      },
+      "expect": {
+        "exit": 1,
+        "stdout": {
+          "jsonschema-validate": [
+            "INVALID: False schema does not allow 1"
+          ],
+          "ajv-validate": [
+            "INVALID: /a: boolean schema is false"
+          ]
+        },
+        "report": {
+          "valid": false,
+          "errors": [
+            {
+              "site": [
+                "a"
+              ],
+              "clause": [
+                "properties",
+                "a"
+              ]
+            }
+          ]
+        }
+      },
+      "defect": {
+        "summary": "The text form locates a false subschema's failure at the parent on the Python leg and at the member on the Node leg, because it prints each library's error as that library reported it and python-jsonschema extends neither path for a boolean subschema.",
+        "divergent": true
       }
     }
   ]

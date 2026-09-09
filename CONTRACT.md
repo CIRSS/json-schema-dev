@@ -109,7 +109,7 @@ The parse tier appears in the report too, since exit status and `valid` must agr
 The two implementations must agree on:
 
 - **exit status**, always;
-- **the JSON report**, in every part but `message`;
+- **the JSON report**, in every part but `message`, on every case — a `divergent` defect suspends the text comparison and never this one;
 - in the text form, **the number of verdict lines** and **the location of each failure**.
 
 They need not agree on **message prose**. The standard leaves message text to the implementation, and the two libraries word the same finding differently — `'b' is a required property` against `must have required property 'b'`. Prose divergence is expected and is not a defect.
@@ -181,9 +181,9 @@ Four of them are properties of the **text form** and do not reach the JSON repor
 
 | Defect | Where |
 | --- | --- |
-| **A crash exits 1.** An exception during validation leaves Node's default exit status, which collides with the INVALID code, and stdout is empty. A caller scripting on exit status reads a crash as a verdict. Reproduced by a relative `errorMessage` pointer in a subschema whose failing keyword is `type`: `ajv-errors` emits `JSON.stringify(dataN)` for a variable Ajv's codegen never bound, and the generated validator throws. | `05-error-message.json` — `--grep "crashes ajv-validate"` |
 | **The `errorMessage` implementations disagree on an unresolvable pointer.** `jsonschema-validate` leaves it in the message as written; `ajv-errors` substitutes the text `undefined`, asserting a value the instance does not have. | `05-error-message.json` — `--grep "unresolvable pointer"` |
 | **JSON Pointers are not escaped on the Python leg.** Path segments are joined with `/` without RFC 6901's `~0`/`~1` escapes, so a member named `a/b` renders as `/a/b` — indistinguishable from a nested member — and one named `a~b` renders as a pointer that does not address it. Ajv escapes correctly, so the legs disagree on location. | `01-location-rendering.json` — `--grep "goes unescaped"` |
+| **The text form locates a `false` subschema's failure at the parent on the Python leg.** python-jsonschema extends neither path for a boolean subschema, and the text line prints its error as reported. The JSON report locates the member correctly on both legs, having recovered it from the applicator and the rejected value; the text form would have to be built from the report to follow. | `01-location-rendering.json` — `--grep "false subschema"` |
 | **The instance root is represented by the string `/`.** RFC 6901 gives the root the *empty* pointer and gives `/` to the member named `""`, so a failure on that member is rendered as though it were a failure of the whole instance. Both legs share the fault. | `01-location-rendering.json` — `--grep "as though the whole instance"` |
 | **Sub-results are printed as peers of their conclusion, or not at all.** Ajv returns an applicator's conclusion and the sub-results behind it in one flat array and the wrapper prints them as equal `INVALID` lines; python-jsonschema yields only conclusions, keeping sub-results in each error's `context`, which the wrapper never reads. So the two report different numbers of lines for every applicator. | all of `02-sub-result-nesting.json` |
 | **`params` is discarded from Ajv's errors.** The offending member's identity travels in `err.params` (`missingProperty`, `additionalProperty`, `unevaluatedProperty`, `allowedValues`, `limit`) and the wrapper prints only `err.message` — so two extra members produce two identical lines, and an `enum` failure names no allowed values. | `03-offender-identity.json` |

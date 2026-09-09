@@ -18,7 +18,6 @@
       },
       "defect": {
         "summary": "ajv-validate emits one failure per offending member while jsonschema-validate aggregates them into a single message, so the legs report different numbers of lines.",
-        "should": "Both legs should report one failure per offending member, each naming the member — which on the Ajv side means using params rather than discarding it.",
         "divergent": true
       },
       "expect": {
@@ -83,7 +82,6 @@
       },
       "defect": {
         "summary": "ajv-validate emits one failure per offending member while jsonschema-validate aggregates them into a single message, so the legs report different numbers of lines.",
-        "should": "Both legs should report one failure per offending member, each naming the member — which on the Ajv side means using params rather than discarding it.",
         "divergent": true
       },
       "expect": {
@@ -186,8 +184,7 @@
       },
       "instance": "banana",
       "defect": {
-        "summary": "ajv-validate's line says only that the value must be one of the allowed values, because params.allowedValues is discarded.",
-        "should": "The line should name the allowed values, as the Python leg's does."
+        "summary": "ajv-validate's line says only that the value must be one of the allowed values, because params.allowedValues is discarded."
       },
       "expect": {
         "exit": 1,
