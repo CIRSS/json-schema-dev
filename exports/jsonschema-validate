@@ -55,6 +55,7 @@ SUPPORTED_VERSION_URI = "https://json-schema.org/draft/2020-12/schema"
 # A $ref chain longer than this is a cycle, and a location is not worth
 # hanging for.
 MAX_REF_DEPTH = 32
+COMMAND_LINE_SCHEMA = "the schema given on the command line"
 
 
 def die(message):
@@ -395,11 +396,8 @@ def extra_members(error, validator):
     if not isinstance(error.schema, dict):
         return None
     if error.validator == "unevaluatedProperties":
-        try:
-            evaluated = find_evaluated_property_keys_by_schema(
-                validator, error.instance, error.schema)
-        except Exception:
-            return None
+        evaluated = find_evaluated_property_keys_by_schema(
+            validator, error.instance, error.schema)
         return [name for name in error.instance if name not in evaluated]
     declared = error.schema.get("properties", {})
     patterns = error.schema.get("patternProperties", {})
@@ -426,6 +424,17 @@ def pointer_segments(document, pointer):
     return segments
 
 
+def lost(error, detail):
+    """A clause we cannot locate is a defect in this program, not a verdict.
+
+    Reporting a plausible partial location would put a place in the report
+    that the keyword is not at, which is the one thing the report exists to
+    prevent. So the run stops and says so.
+    """
+    die(f"cannot locate the {error.validator} keyword that failed at "
+        f"/{'/'.join(str(p) for p in error.absolute_path)}: {detail}")
+
+
 def rule_location(error, schema, registry):
     """Where the failing keyword lives, as a resource and a path into it.
 
@@ -449,20 +458,20 @@ def rule_location(error, schema, registry):
                 try:
                     document = registry.contents(uri)
                 except Exception:
-                    return {"resource": resource, "path": segments}
+                    lost(error, f"nothing is registered under {uri}")
                 resource = uri
             try:
                 segments = pointer_segments(document, pointer)
+                node = document
+                for step in segments:
+                    node = node[step]
             except (KeyError, IndexError, TypeError, ValueError):
-                return {"resource": resource, "path": segments}
-            node = document
-            for step in segments:
-                node = node[step]
+                lost(error, f"{node['$ref']} points nowhere in {resource or COMMAND_LINE_SCHEMA}")
             depth += 1
         try:
             node = node[segment]
         except (KeyError, IndexError, TypeError):
-            return {"resource": resource, "path": segments}
+            lost(error, f"the path leaves the schema at {segment!r}")
         segments = segments + [segment]
     return {"resource": resource, "path": segments}
 
@@ -686,6 +695,35 @@ def verdict_lines(errors, schema, instance):
     return lines
 
 
+# An array of scalars short enough to read at a glance goes on one line;
+# everything else indents. Only the layout is ours -- every scalar still
+# goes through the standard serializer, so escaping and number formatting
+# stay identical to the other leg's for free. The separators are set
+# explicitly because the two languages disagree by default: Python writes
+# ", " between elements and JavaScript writes ",".
+INLINE_WIDTH = 72
+
+
+def render(value, indent=0):
+    pad = " " * indent
+    if isinstance(value, list):
+        if not value:
+            return "[]"
+        if all(not isinstance(item, (list, dict)) for item in value):
+            inline = json.dumps(value, ensure_ascii=False, separators=(", ", ": "))
+            if len(inline) + indent <= INLINE_WIDTH:
+                return inline
+        items = [f"{pad}  {render(item, indent + 2)}" for item in value]
+        return "[\n" + ",\n".join(items) + f"\n{pad}]"
+    if isinstance(value, dict):
+        if not value:
+            return "{}"
+        items = [f"{pad}  {json.dumps(key, ensure_ascii=False)}: "
+                 f"{render(item, indent + 2)}" for key, item in value.items()]
+        return "{\n" + ",\n".join(items) + f"\n{pad}}}"
+    return json.dumps(value, ensure_ascii=False)
+
+
 def write_output(destination, text):
     if destination == "-":
         sys.stdout.write(text)
@@ -703,8 +741,7 @@ def emit(args, valid, lines, errors):
                                         for line in (["VALID"] if valid else lines)))
     if args.json:
         report = {"valid": valid, "errors": errors}
-        write_output(args.json,
-                     json.dumps(report, indent=2, ensure_ascii=False) + "\n")
+        write_output(args.json, render(report) + "\n")
     return EXIT_VALID if valid else EXIT_INVALID
 
 

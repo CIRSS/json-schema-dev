@@ -172,7 +172,13 @@ function ruleLocation(schemaPath, schema, refSchemas) {
       path: pathSegments(pointer, contents),
     };
   }
-  return { resource: null, path: [] };
+  // A clause we cannot locate is a defect in this program, not a verdict:
+  // reporting a plausible partial location would put a place in the report
+  // that the keyword is not at, which is the one thing the report exists to
+  // prevent. So the run stops and says so.
+  die(`cannot locate the keyword that failed: ${schemaPath} names no schema `
+      + 'given on the command line or by --ref');
+  return undefined;
 }
 
 // ajv-errors replaces the errors an authored errorMessage covers with one
@@ -312,6 +318,35 @@ function tidy(errors) {
   });
 }
 
+// An array of scalars short enough to read at a glance goes on one line;
+// everything else indents. Only the layout is ours -- every scalar still
+// goes through JSON.stringify, so escaping and number formatting stay
+// identical to the other leg's for free. The separator is written out
+// because the two languages disagree by default: Python writes ", "
+// between elements and JavaScript writes ",".
+const INLINE_WIDTH = 72;
+
+function render(value, indent = 0) {
+  const pad = ' '.repeat(indent);
+  if (Array.isArray(value)) {
+    if (value.length === 0) return '[]';
+    if (value.every((item) => item === null || typeof item !== 'object')) {
+      const inline = `[${value.map((item) => JSON.stringify(item)).join(', ')}]`;
+      if (inline.length + indent <= INLINE_WIDTH) return inline;
+    }
+    const items = value.map((item) => `${pad}  ${render(item, indent + 2)}`);
+    return `[\n${items.join(',\n')}\n${pad}]`;
+  }
+  if (value !== null && typeof value === 'object') {
+    const entries = Object.entries(value);
+    if (entries.length === 0) return '{}';
+    const items = entries.map(([key, item]) =>
+      `${pad}  ${JSON.stringify(key)}: ${render(item, indent + 2)}`);
+    return `{\n${items.join(',\n')}\n${pad}}`;
+  }
+  return JSON.stringify(value);
+}
+
 function writeOutput(destination, text) {
   if (destination === '-') {
     process.stdout.write(text);
@@ -329,7 +364,7 @@ function emit(opts, valid, lines, errors) {
     writeOutput(opts.text, (valid ? ['VALID'] : lines).map((l) => `${l}\n`).join(''));
   }
   if (opts.json !== undefined) {
-    writeOutput(opts.json, `${JSON.stringify({ valid, errors }, null, 2)}\n`);
+    writeOutput(opts.json, `${render({ valid, errors })}\n`);
   }
   return valid ? EXIT_VALID : EXIT_INVALID;
 }

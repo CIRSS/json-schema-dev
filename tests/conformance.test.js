@@ -75,6 +75,13 @@ for (const { group } of loadCorpus()) {
                         'the two implementations disagree about what was found'
                         + `\n  ${LEGS[0]}: ${JSON.stringify(left)}`
                         + `\n  ${LEGS[1]}: ${JSON.stringify(right)}`);
+
+                    // The wrappers lay the report out themselves, so nothing
+                    // above would notice the two drifting apart: the
+                    // comparison parses the JSON and never sees whitespace.
+                    const [leftText, rightText] = LEGS.map((leg) => results[leg].layout);
+                    assert.strictEqual(leftText, rightText,
+                        'the two implementations lay the report out differently');
                 });
 
                 if (testCase.defect) {

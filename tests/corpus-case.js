@@ -118,19 +118,34 @@ function runLeg(leg, testCase, paths) {
         stdout: stdout.length ? scrub(stdout).replace(/\n$/, '').split('\n') : [],
         stderr: scrub(stderr),
         report: readReport(paths, scrub),
+        layout: layoutOf(paths, scrub),
     };
 }
 
 // The JSON report the run saved, with messages removed, or null where the run
 // never got as far as writing one -- an unreadable file, a schema that is not
 // a schema, an argument the parser refused.
+//
+// A file that exists and does not parse is a defect rather than an absence,
+// so it is thrown rather than reported as nothing written.
 function readReport(paths, scrub) {
     if (!fs.existsSync(paths.report)) return null;
-    try {
-        return structureOf(JSON.parse(scrub(fs.readFileSync(paths.report, 'utf8'))));
-    } catch (error) {
-        return null;
-    }
+    return structureOf(JSON.parse(scrub(fs.readFileSync(paths.report, 'utf8'))));
+}
+
+// The report's text with its message lines dropped: everything the layout
+// does, and nothing either library's prose does.
+//
+// The two legs lay the report out themselves rather than taking a standard
+// serializer's default, so nothing else here would notice them drifting
+// apart -- the structural comparison parses the JSON and never sees the
+// whitespace. Compared byte for byte, this does.
+function layoutOf(paths, scrub) {
+    if (!fs.existsSync(paths.report)) return null;
+    return scrub(fs.readFileSync(paths.report, 'utf8'))
+        .split('\n')
+        .filter((line) => !/^\s*"message":/.test(line))
+        .join('\n');
 }
 
 // Runs a case through both validators, removing the scratch directory after.
