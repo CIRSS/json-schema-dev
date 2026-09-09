@@ -102,8 +102,6 @@ Every run produces a report, so a valid instance gives `{"valid": true, "errors"
 
 The parse tier appears in the report too, since exit status and `valid` must agree: a document that does not parse is one entry with the keyword `parse`, and `--reject-duplicate-members` produces one with the keyword `duplicateMember` per repeated name.
 
-**A known limitation:** a report cannot be traced back to the files the run was given. `document` names a schema by its `$id`, which is the same in every run, where a path is a fact about one run on one machine — and comparability between runs is what the cross-validation rests on.
-
 ### What must agree, and what need not
 
 The two implementations must agree on:
@@ -172,6 +170,14 @@ Declaring 2020-12, or declaring nothing, passes through untouched.
 Neither wrapper checks `format`. It is the annotation that 2020-12 makes it by default, on both legs alike and in silence — Ajv's "unknown format ignored" warning is switched off, because ignoring is all the wrapper ever does with a format.
 
 Format *assertion*, if it is ever added, goes on both legs together as an explicit option, with the unknown-format case handled identically.
+
+## Limitations
+
+These are not defects and will not be repaired. They are the edges of what this pair can be used for, and a schema written for both wrappers should stay inside them.
+
+**The Python leg does not implement the regular expression dialect the specification names.** JSON Schema says a `pattern` is an ECMA-262 regular expression; python-jsonschema hands the string to Python's `re`, whose dialect differs. The difference that is known: `$` matches before a trailing newline in Python and only at the end of input in JavaScript, so `^[0-9a-f]{4}$` accepts `"abcd\n"` on one leg and rejects it on the other. Others have not been enumerated — `\d`, `\w` and `\b` are Unicode-aware in Python and ASCII in ECMA-262, for a start. **A schema meant for both wrappers should not lean on the anchor**, and there is no portable way to write "end of input" that both read alike. Demo 07 in [`json-schema-demos`](https://github.com/CIRSS/json-schema-demos) exhibits it.
+
+**A report cannot be traced back to the files the run was given.** `document` names a schema by its `$id`, which is the same in every run, where a path is a fact about one run on one machine — and comparability between runs is what the cross-validation rests on. A caller that needs the file supplied both, and holds the mapping.
 
 ## Known defects
 

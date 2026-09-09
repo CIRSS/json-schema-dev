@@ -39,6 +39,10 @@ Inside a started REPRO it is plain Mocha (`npm test`, `npm test -- --grep <case>
 
 (`Makefile-tests` is separate and older: it exercises the REPRO lifecycle, not the validator contract.)
 
+## Limitations
+
+What this pair cannot be used for, as against what it does not yet do well: see [`CONTRACT.md`](CONTRACT.md#limitations). The one that constrains schema authors is that the Python leg does not implement the ECMA-262 regular expression dialect `pattern` is defined in, so a schema meant for both wrappers should not lean on `$`.
+
 ## Build
 
 The parent image adds Python (via `apt`) and a pinned Node (official prebuilt binary) to the published framework base, so it builds from nothing local.
