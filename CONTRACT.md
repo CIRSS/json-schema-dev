@@ -134,19 +134,27 @@ A `--ref` file with no `$id` is refused: there is nothing to register it under.
 
 ## `errorMessage`
 
-A nonstandard keyword — Ajv gets it from the `ajv-errors` plugin, and `jsonschema-validate` implements the same behavior independently by reading the messages out of the schema JSON. The **portable subset** both implement:
+A nonstandard keyword that both libraries ignore. Both wrappers read it out of the schema JSON and implement it the same way; neither uses Ajv's `ajv-errors` plugin. It is an annotation: it changes what a failure is called, never whether it is one, so the verdict and every field of the JSON report but `message` are the same with or without it.
 
-- a plain-string `errorMessage` covers every failure within its subschema;
-- an object form supplies one message per failing keyword;
-- the lookup walks outward from the failing keyword and takes the first message it meets, so an inner message beats an enclosing one;
-- the walk starts at the subschema the failing keyword sits in, wherever a `$ref` led to it, so a message stated with a factored-out definition covers failures of that definition everywhere it is applied — and beats one written beside the `$ref`, the definition being nearer;
-- `${/a/json/pointer}` interpolates the instance value at that absolute pointer, JSON-encoded;
-- `${0}`, `${1/member}` interpolate relative to the failing value: the integer climbs that many levels, an optional path descends from there;
-- a failure no message covers keeps the library's own message.
+**Forms.** In the subschema it sits in:
 
-An authored message is printed exactly as authored, with the location but never any other decoration.
+- a **string** covers every failure within the subschema, however deep;
+- an **object** keyed by keyword covers a failure of that keyword *in this subschema only* — an outer `type` message does not reach a `type` failure inside a member's own subschema;
+- under `required`, an object keyed by member name gives each missing member its own message;
+- `properties`, an object keyed by member name, covers any failure inside that member, whatever keyword failed and however deep;
+- `items`, an array, covers any failure inside the element at that index;
+- `_` covers whatever no other entry in the object does.
 
-The corpus has found the two implementations disagreeing here — see the defects below.
+**The nearest message wins.** The lookup walks outward from the failing keyword through every subschema that led to it — across a `$ref`, into a `--ref` file, through a `contains` element — and takes the first message that covers the failure. So a message stated with a factored-out definition covers the definition's failures everywhere it is applied and beats one written beside the `$ref`; and a message beside the `$ref` covers the definition's failures where the definition states none.
+
+**Interpolation.** `${…}` in a message is replaced by an instance value, JSON-encoded:
+
+- `${/a/json/pointer}` resolves from the instance root;
+- `${0}`, `${1/member}` resolve from **the location the message is written for** — the subschema's own instance location for a string, keyword or `_` message, the member or element for a `properties` or `items` message — the integer climbing that many levels and an optional path descending from there. `${0}` in a message beside the failing keyword is the failing value itself; in a string message covering a deeper failure it is the value the message's subschema was applied to;
+- `${0#}`, `${1#}` give the member name or index at that level;
+- a pointer that resolves to nothing is left in the message as written.
+
+A failure no message covers keeps the library's own message. An authored message is printed exactly as authored, with the location but never any other decoration.
 
 ## `--reject-duplicate-members`
 
@@ -190,7 +198,6 @@ Four of them are properties of the **text form** and do not reach the JSON repor
 
 | Defect | Where |
 | --- | --- |
-| **The `errorMessage` implementations disagree on an unresolvable pointer.** `jsonschema-validate` leaves it in the message as written; `ajv-errors` substitutes the text `undefined`, asserting a value the instance does not have. | `05-error-message.json` — `--grep "unresolvable pointer"` |
 | **JSON Pointers are not escaped on the Python leg.** Path segments are joined with `/` without RFC 6901's `~0`/`~1` escapes, so a member named `a/b` renders as `/a/b` — indistinguishable from a nested member — and one named `a~b` renders as a pointer that does not address it. Ajv escapes correctly, so the legs disagree on location. | `01-location-rendering.json` — `--grep "goes unescaped"` |
 | **The text form locates a `false` subschema's failure at the parent on the Python leg.** python-jsonschema extends neither path for a boolean subschema, and the text line prints its error as reported. The JSON report locates the member correctly on both legs, having recovered it from the applicator and the rejected value; the text form would have to be built from the report to follow. | `01-location-rendering.json` — `--grep "false subschema"` |
 | **The instance root is represented by the string `/`.** RFC 6901 gives the root the *empty* pointer and gives `/` to the member named `""`, so a failure on that member is rendered as though it were a failure of the whole instance. Both legs share the fault. | `01-location-rendering.json` — `--grep "as though the whole instance"` |
