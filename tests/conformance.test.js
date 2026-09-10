@@ -85,6 +85,26 @@ for (const { group } of loadCorpus()) {
                         'the two implementations lay the report out differently');
                 });
 
+                // `found` is the value at `site`, and this is what makes it
+                // worth trusting: the wrappers resolve it against the
+                // finished path rather than reporting what their library
+                // handed over, so a relocated site cannot carry the parent's
+                // value. Walked here independently of the walkers under test,
+                // since a check that borrows the code it checks asserts
+                // nothing.
+                if ('instance' in testCase) {
+                    it('reports as found the value at each site', function () {
+                        for (const leg of LEGS) {
+                            for (const entry of foundEntries(results[leg].report)) {
+                                assert.deepStrictEqual(
+                                    entry.found, valueAt(entry.site, testCase.instance),
+                                    `${leg}: found is not the value at /${entry.site.join('/')}`
+                                    + `\n${describeCase(testCase)}`);
+                            }
+                        }
+                    });
+                }
+
                 // A defect's summary becomes a test name, so the inventory of
                 // known-wrong behavior is part of the report and cannot drift
                 // from the cases that demonstrate it. The test asserts nothing
@@ -95,6 +115,22 @@ for (const { group } of loadCorpus()) {
             });
         }
     });
+}
+
+// Every entry carrying a `found`, including those nested inside a rejection.
+function* foundEntries(report) {
+    for (const entry of (report && report.errors) || []) yield* walkEntry(entry);
+}
+
+function* walkEntry(entry) {
+    if ('found' in entry) yield { site: entry.site || [], found: entry.found };
+    for (const rejection of entry.rejections || []) {
+        for (const nested of rejection.errors || []) yield* walkEntry(nested);
+    }
+}
+
+function valueAt(site, instance) {
+    return site.reduce((node, segment) => node[segment], instance);
 }
 
 function describeCase(testCase) {
