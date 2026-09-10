@@ -1,6 +1,6 @@
 {
   "group": "authored messages",
-  "description": "errorMessage is nonstandard — Ajv gets it from the ajv-errors plugin, and jsonschema-validate implements the same portable subset independently by reading the messages out of the schema JSON. An authored message is one of the two texts the wrappers generate rather than the libraries, so the two legs are contracted to emit it identically.",
+  "description": "errorMessage is nonstandard and both libraries ignore it, so both wrappers read the messages out of the schema JSON and implement them the same way. An authored message is one of the two texts the wrappers generate rather than the libraries, so the two legs are contracted to emit it identically.",
   "cases": [
     {
       "name": "a plain-string errorMessage covers every failure within its subschema",
@@ -511,8 +511,8 @@
       }
     },
     {
-      "name": "an unresolvable pointer is left as written by one leg and replaced with undefined by the other",
-      "description": "A pointer that does not resolve is left in the message verbatim rather than guessed at.",
+      "name": "an unresolvable pointer is left in the message as written",
+      "description": "A pointer that names nothing is left in the message verbatim rather than guessed at.",
       "schema": {
         "type": "object",
         "required": [
@@ -524,14 +524,9 @@
       "identicalMessages": true,
       "expect": {
         "exit": 1,
-        "stdout": {
-          "jsonschema-validate": [
-            "INVALID: missing id on ${/nonexistent/path}"
-          ],
-          "ajv-validate": [
-            "INVALID: missing id on undefined"
-          ]
-        },
+        "stdout": [
+          "INVALID: missing id on ${/nonexistent/path}"
+        ],
         "report": {
           "valid": false,
           "errors": [
@@ -547,10 +542,430 @@
             }
           ]
         }
+      }
+    },
+    {
+      "name": "a required message can name each missing member",
+      "description": "Under required, an object keyed by member name gives each missing member its own message.",
+      "schema": {
+        "type": "object",
+        "required": [
+          "name",
+          "digest"
+        ],
+        "errorMessage": {
+          "required": {
+            "name": "a record must be named",
+            "digest": "a record must carry a digest"
+          }
+        }
       },
-      "defect": {
-        "summary": "The two errorMessage implementations disagree on an unresolvable pointer: jsonschema-validate leaves ${/nonexistent/path} in the message as written, and ajv-errors substitutes the text `undefined`.",
-        "divergent": true
+      "instance": {},
+      "identicalMessages": true,
+      "expect": {
+        "exit": 1,
+        "stdout": [
+          "INVALID: a record must be named",
+          "INVALID: a record must carry a digest"
+        ],
+        "report": {
+          "valid": false,
+          "errors": [
+            {
+              "keyword": "required",
+              "clause": [
+                "required"
+              ],
+              "particulars": {
+                "missingProperty": "name"
+              },
+              "found": {}
+            },
+            {
+              "keyword": "required",
+              "clause": [
+                "required"
+              ],
+              "particulars": {
+                "missingProperty": "digest"
+              },
+              "found": {}
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "a properties message covers any failure inside that member",
+      "description": "Whatever keyword failed and however deep, a failure under the named member takes the member's message.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "size": {
+            "type": "integer",
+            "minimum": 2
+          }
+        },
+        "errorMessage": {
+          "properties": {
+            "size": "size must be a whole number of at least 2"
+          }
+        }
+      },
+      "instance": {
+        "size": 1
+      },
+      "identicalMessages": true,
+      "expect": {
+        "exit": 1,
+        "stdout": [
+          "INVALID: /size: size must be a whole number of at least 2"
+        ],
+        "report": {
+          "valid": false,
+          "errors": [
+            {
+              "site": [
+                "size"
+              ],
+              "keyword": "minimum",
+              "clause": [
+                "properties",
+                "size",
+                "minimum"
+              ],
+              "constraint": {
+                "comparison": ">=",
+                "limit": 2
+              },
+              "found": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "an items message covers the element at that index",
+      "description": "items is an array of messages, one per element position.",
+      "schema": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "integer"
+          }
+        ],
+        "errorMessage": {
+          "items": [
+            "the first element is a name",
+            "the second element is a count"
+          ]
+        }
+      },
+      "instance": [
+        "ok",
+        "seven"
+      ],
+      "identicalMessages": true,
+      "expect": {
+        "exit": 1,
+        "stdout": [
+          "INVALID: /1: the second element is a count"
+        ],
+        "report": {
+          "valid": false,
+          "errors": [
+            {
+              "site": [
+                1
+              ],
+              "keyword": "type",
+              "clause": [
+                "prefixItems",
+                1,
+                "type"
+              ],
+              "constraint": {
+                "type": "integer"
+              },
+              "found": "seven"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "the default message covers what no keyword message does",
+      "description": "Under an object errorMessage, _ covers any failure in the subschema that no other entry does.",
+      "schema": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "errorMessage": {
+          "required": "a record needs an id",
+          "_": "the record is malformed"
+        }
+      },
+      "instance": [],
+      "identicalMessages": true,
+      "expect": {
+        "exit": 1,
+        "stdout": [
+          "INVALID: the record is malformed"
+        ],
+        "report": {
+          "valid": false,
+          "errors": [
+            {
+              "keyword": "type",
+              "clause": [
+                "type"
+              ],
+              "constraint": {
+                "type": "object"
+              },
+              "found": []
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "a keyword message covers only the subschema it is written in",
+      "description": "An outer message keyed by type does not reach a type failure inside a member's own subschema; that failure keeps the library's message.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          }
+        },
+        "errorMessage": {
+          "type": "a record must be an object"
+        }
+      },
+      "instance": {
+        "id": 5
+      },
+      "expect": {
+        "exit": 1,
+        "stdout": {
+          "jsonschema-validate": [
+            "INVALID: /id: 5 is not of type 'string'"
+          ],
+          "ajv-validate": [
+            "INVALID: /id: must be string"
+          ]
+        },
+        "report": {
+          "valid": false,
+          "errors": [
+            {
+              "site": [
+                "id"
+              ],
+              "keyword": "type",
+              "clause": [
+                "properties",
+                "id",
+                "type"
+              ],
+              "constraint": {
+                "type": "string"
+              },
+              "found": 5
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "a message beside a $ref covers a failure inside the definition it refers to",
+      "description": "Where the definition states no message of its own, the lookup continues outward to the referring site.",
+      "schema": {
+        "$defs": {
+          "flavor": {
+            "enum": [
+              "vanilla",
+              "chocolate"
+            ]
+          }
+        },
+        "properties": {
+          "order": {
+            "$ref": "#/$defs/flavor",
+            "errorMessage": "the order line is wrong"
+          }
+        }
+      },
+      "instance": {
+        "order": "pistachio"
+      },
+      "identicalMessages": true,
+      "expect": {
+        "exit": 1,
+        "stdout": [
+          "INVALID: /order: the order line is wrong"
+        ],
+        "report": {
+          "valid": false,
+          "errors": [
+            {
+              "site": [
+                "order"
+              ],
+              "keyword": "enum",
+              "clause": [
+                "$defs",
+                "flavor",
+                "enum"
+              ],
+              "constraint": {
+                "allowedValues": [
+                  "vanilla",
+                  "chocolate"
+                ]
+              },
+              "found": "pistachio"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "a relative pointer resolves from where the message is written",
+      "description": "${0} in a string message covering a deeper failure is the value the message's own subschema was applied to, not the deeper value that failed; the location reported is still the failure's.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "size": {
+            "type": "number",
+            "minimum": 4
+          }
+        },
+        "errorMessage": "record ${0} is bad; size is ${/size}"
+      },
+      "instance": {
+        "size": 1
+      },
+      "identicalMessages": true,
+      "expect": {
+        "exit": 1,
+        "stdout": [
+          "INVALID: /size: record {\"size\":1} is bad; size is 1"
+        ],
+        "report": {
+          "valid": false,
+          "errors": [
+            {
+              "site": [
+                "size"
+              ],
+              "keyword": "minimum",
+              "clause": [
+                "properties",
+                "size",
+                "minimum"
+              ],
+              "constraint": {
+                "comparison": ">=",
+                "limit": 4
+              },
+              "found": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "a trailing hash interpolates the member name or index",
+      "description": "${0#} is the name or index of the failing value within its parent.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "size": {
+            "type": "number"
+          }
+        },
+        "additionalProperties": {
+          "not": true,
+          "errorMessage": "extra member is ${0#}"
+        }
+      },
+      "instance": {
+        "size": 1,
+        "bogus": 2
+      },
+      "identicalMessages": true,
+      "expect": {
+        "exit": 1,
+        "stdout": [
+          "INVALID: /bogus: extra member is \"bogus\""
+        ],
+        "report": {
+          "valid": false,
+          "errors": [
+            {
+              "site": [
+                "bogus"
+              ],
+              "keyword": "not",
+              "clause": [
+                "additionalProperties",
+                "not"
+              ],
+              "found": 2
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "an additionalProperties message covers the member it rejects",
+      "description": "A rejected member is reported at that member, carrying the keyword's message. (Several rejected members are the text form's recorded granularity defect, pinned in the offender-identity group.)",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "size": {
+            "type": "number"
+          }
+        },
+        "additionalProperties": false,
+        "errorMessage": {
+          "additionalProperties": "only size is allowed"
+        }
+      },
+      "instance": {
+        "size": 1,
+        "bogus": 2
+      },
+      "identicalMessages": true,
+      "expect": {
+        "exit": 1,
+        "stdout": [
+          "INVALID: only size is allowed"
+        ],
+        "report": {
+          "valid": false,
+          "errors": [
+            {
+              "site": [
+                "bogus"
+              ],
+              "keyword": "additionalProperties",
+              "clause": [
+                "additionalProperties"
+              ],
+              "particulars": {
+                "additionalProperty": "bogus"
+              },
+              "found": 2
+            }
+          ]
+        }
       }
     }
   ]

@@ -197,71 +197,238 @@ def enclosing_schemas(error, schema):
         yield node
 
 
-def custom_message(error, schema):
-    """The message from the nearest enclosing errorMessage, if any.
+# errorMessage is a nonstandard keyword that both libraries ignore, so both
+# wrappers read it out of the schema JSON themselves and implement it the
+# same way. A message lookup walks outward from the failing keyword through
+# every subschema that led to it, and neither library reports that route
+# whole -- python-jsonschema erases each $ref it followed, Ajv reports the
+# route from the referenced resource's root -- so the route is found here by
+# following the instance path down from the root, resolving every $ref on
+# the way, until the failing keyword's own subschema is reached.
+DESCENDING_BY_KEY = ("additionalProperties", "unevaluatedProperties")
+DESCENDING_BY_INDEX = ("items", "contains", "unevaluatedItems")
+NON_DESCENDING_LISTS = ("allOf", "anyOf", "oneOf")
+NON_DESCENDING_SINGLES = ("not", "if", "then", "else", "propertyNames")
 
-    errorMessage is a nonstandard keyword (Ajv's ajv-errors plugin defines
-    it) that the jsonschema library ignores -- but a schema is JSON, so the
-    messages are data this wrapper can read for itself. Supported here is the
-    portable subset cross-validated by demo 19: a plain-string errorMessage
-    covers every failure within its subschema, an object supplies one message
-    per failing keyword, and ${/json/pointer} interpolates the instance value
-    at that pointer (JSON-encoded, resolved from the instance root, matching
-    ajv-errors). Failures no message covers keep the library's own message.
+# The keywords whose object-form message is keyed by the member at fault,
+# and the field of the offender params that names that member.
+MEMBER_MESSAGE_KEYWORDS = {"required": "missingProperty"}
 
-    A message stated with a factored-out definition therefore covers failures
-    of that definition wherever it is applied, and beats one written beside
-    the $ref, the definition being the nearer of the two.
+
+def descend_pointer(node, pointer):
+    """The value a JSON Pointer names below node; raises where it names none."""
+    for raw in pointer.split("/")[1:] if pointer else []:
+        token = raw.replace("~1", "/").replace("~0", "~")
+        if isinstance(node, list):
+            if not token.isdigit():
+                raise KeyError(token)
+            node = node[int(token)]
+        elif isinstance(node, dict):
+            node = node[token]
+        else:
+            raise KeyError(token)
+    return node
+
+
+def ref_target(reference, base, index):
+    """Where a $ref leads, as (node, base), or None where it leads nowhere.
+
+    A reference that resolves to nothing is a dead branch of the search
+    rather than a verdict: validation already reached the failing keyword,
+    so the route to it resolves, and a branch that does not is not the route.
     """
-    for node in enclosing_schemas(error, schema):
+    uri, _, fragment = reference.partition("#")
+    try:
+        if uri:
+            document, path = index[uri]
+            base = uri
+        else:
+            document, path = index[base if base else "#"]
+        if fragment and not fragment.startswith("/"):
+            document, path = index[f"{base or ''}#{fragment}"]
+            fragment = ""
+        node = document
+        for step in path:
+            node = node[step]
+        return descend_pointer(node, fragment), base
+    except (KeyError, IndexError, TypeError, ValueError):
+        return None
+
+
+def enclosing_chain(schema, index, data_path, target):
+    """The subschemas from the root down to the failing keyword's own, each
+    paired with the instance location it was applied at.
+
+    Found by following data_path from the root and resolving every $ref on
+    the way; the search ends at the subschema the library says the keyword
+    sits in, matched by identity. A boolean subschema has no identity of its
+    own, so it is matched where the path runs out.
+    """
+    wants_object = isinstance(target, dict)
+    seen = set()
+
+    def search(node, base, remaining, chain):
+        key = (id(node), len(remaining))
+        if key in seen:
+            return None
+        seen.add(key)
+        here = chain + [(node, data_path[:len(data_path) - len(remaining)])]
+        if wants_object:
+            if node is target:
+                return here
+        elif not remaining and node == target:
+            return here
+        if not isinstance(node, dict):
+            return None
+        reference = node.get("$ref")
+        if isinstance(reference, str):
+            resolved = ref_target(reference, base, index)
+            if resolved:
+                found = search(resolved[0], resolved[1], remaining, here)
+                if found:
+                    return found
+        own_id = node.get("$id")
+        if isinstance(own_id, str) and chain:
+            base = own_id
+        if remaining:
+            segment, rest = remaining[0], remaining[1:]
+            if isinstance(segment, str):
+                named = node.get("properties")
+                if isinstance(named, dict) and segment in named:
+                    found = search(named[segment], base, rest, here)
+                    if found:
+                        return found
+                patterned = node.get("patternProperties")
+                if isinstance(patterned, dict):
+                    for pattern, child in patterned.items():
+                        if re.search(pattern, segment):
+                            found = search(child, base, rest, here)
+                            if found:
+                                return found
+                for keyword in DESCENDING_BY_KEY:
+                    if keyword in node:
+                        found = search(node[keyword], base, rest, here)
+                        if found:
+                            return found
+            else:
+                prefixed = node.get("prefixItems")
+                if isinstance(prefixed, list) and segment < len(prefixed):
+                    found = search(prefixed[segment], base, rest, here)
+                    if found:
+                        return found
+                for keyword in DESCENDING_BY_INDEX:
+                    if keyword in node:
+                        found = search(node[keyword], base, rest, here)
+                        if found:
+                            return found
+        for keyword in NON_DESCENDING_LISTS:
+            branches = node.get(keyword)
+            if isinstance(branches, list):
+                for child in branches:
+                    found = search(child, base, remaining, here)
+                    if found:
+                        return found
+        for keyword in NON_DESCENDING_SINGLES:
+            if keyword in node:
+                found = search(node[keyword], base, remaining, here)
+                if found:
+                    return found
+        dependents = node.get("dependentSchemas")
+        if isinstance(dependents, dict):
+            for child in dependents.values():
+                found = search(child, base, remaining, here)
+                if found:
+                    return found
+        return None
+
+    return search(schema, None, list(data_path), [])
+
+
+def custom_message(error, schema, instance, index, params, data_path):
+    """The message the schema's author wrote for this failure, interpolated,
+    or None where no message covers it.
+
+    The nearest message wins: the lookup walks outward from the failing
+    keyword's own subschema. In that subschema an object form is keyed by
+    keyword, or by member name under "required"; in an enclosing one it is
+    keyed by the member or element the failure lies under ("properties",
+    "items"); a string, or "_" in an object, covers everything beneath.
+    """
+    chain = enclosing_chain(schema, index, data_path, error.schema)
+    if not chain:
+        return None
+    innermost = len(chain) - 1
+    for i in range(innermost, -1, -1):
+        node, at = chain[i]
         if not isinstance(node, dict):
             continue
         declared = node.get("errorMessage")
         if isinstance(declared, str):
-            return declared
-        if isinstance(declared, dict):
+            return interpolate(declared, instance, at)
+        if not isinstance(declared, dict):
+            continue
+        if i == innermost:
             message = declared.get(error.validator)
             if isinstance(message, str):
-                return message
+                return interpolate(message, instance, at)
+            if isinstance(message, dict) and error.validator in MEMBER_MESSAGE_KEYWORDS:
+                member = params.get(MEMBER_MESSAGE_KEYWORDS[error.validator])
+                named = message.get(member) if isinstance(member, str) else None
+                if isinstance(named, str):
+                    return interpolate(named, instance, at)
+        elif len(at) < len(data_path):
+            segment = data_path[len(at)]
+            members = declared.get("properties")
+            if isinstance(segment, str) and isinstance(members, dict):
+                named = members.get(segment)
+                if isinstance(named, str):
+                    return interpolate(named, instance, at + [segment])
+            elements = declared.get("items")
+            if (isinstance(segment, int) and isinstance(elements, list)
+                    and segment < len(elements) and isinstance(elements[segment], str)):
+                return interpolate(elements[segment], instance, at + [segment])
+        fallback = declared.get("_")
+        if isinstance(fallback, str):
+            return interpolate(fallback, instance, at)
     return None
 
 
-def interpolate(message, instance, error_path):
-    """Replace each ${pointer} with the instance value it points at.
+def encode(value):
+    """JSON, laid out as JSON.stringify lays it out, so the legs agree."""
+    return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
 
-    Two pointer forms, matching ajv-errors. An absolute JSON Pointer
-    (${/artifacts/0}; RFC 6901, with ~0/~1 escapes) resolves from the
-    instance root — a fixed address, useful only where the schema knows the
-    exact location. A relative JSON Pointer (${0}, ${1/digest}) resolves
-    from the failing value's own location: the integer climbs that many
-    levels up from it, and an optional path descends from there — so ${0}
-    is the failing value itself, wherever it occurs. Values are
-    JSON-encoded. A pointer that does not resolve (including the unsupported
-    trailing-# form) is left in the message as written.
+
+def interpolate(message, instance, at):
+    """Replace each ${pointer} with the instance value it names, JSON-encoded.
+
+    An absolute JSON Pointer (${/artifacts/0}) resolves from the instance
+    root. A relative one (${0}, ${1/digest}, ${0#}) resolves from `at`, the
+    location the message is written for: the integer climbs that many
+    levels, a following path descends from there, and a trailing # gives
+    the member name or index at that level. A pointer that resolves to
+    nothing is left in the message as written.
     """
-    def descend(node, pointer):
-        for token in pointer.lstrip("/").split("/") if pointer else []:
-            token = token.replace("~1", "/").replace("~0", "~")
-            node = node[int(token)] if isinstance(node, list) else node[token]
-        return node
-
     def replace(match):
         pointer = match.group(1)
         try:
-            if pointer.startswith("/") or pointer == "":
-                return json.dumps(descend(instance, pointer))
-            relative = re.fullmatch(r"(0|[1-9][0-9]*)(/.*)?", pointer)
-            if relative:
-                up = int(relative.group(1))
-                if up > len(error_path):
+            if pointer == "" or pointer.startswith("/"):
+                return encode(descend_pointer(instance, pointer))
+            relative = re.fullmatch(r"(0|[1-9][0-9]*)(#|/.*)?", pointer)
+            if not relative:
+                return match.group(0)
+            up, tail = int(relative.group(1)), relative.group(2) or ""
+            if up > len(at):
+                return match.group(0)
+            if tail == "#":
+                if up == len(at):
                     return match.group(0)
-                node = instance
-                for segment in list(error_path)[:len(error_path) - up]:
-                    node = node[segment]
-                return json.dumps(descend(node, relative.group(2) or ""))
+                return encode(at[len(at) - up - 1])
+            node = instance
+            for segment in at[:len(at) - up]:
+                node = node[segment]
+            return encode(descend_pointer(node, tail))
         except (KeyError, IndexError, TypeError, ValueError):
-            pass
-        return match.group(0)
+            return match.group(0)
     return re.sub(r"\$\{([^}]*)\}", replace, message)
 
 
@@ -314,9 +481,8 @@ CONSTRAINT_PARAMS = frozenset({
 })
 
 
-def split_params(error, seen):
+def split_params(params):
     """The keyword's demand and the violation's particulars, separately."""
-    params = offender_params(error, seen)
     return ({k: v for k, v in params.items() if k in CONSTRAINT_PARAMS},
             {k: v for k, v in params.items() if k not in CONSTRAINT_PARAMS})
 
@@ -601,7 +767,7 @@ def with_prefix(errors, site_prefix, clause_prefix):
     return errors
 
 
-def contains_rejections(error, validator, schema, instance, index):
+def contains_rejections(error, validator, schema, instance, index, root):
     """Why each element failed the schema "contains" asked for.
 
     python-jsonschema gives a contains failure no context: it counts matches
@@ -620,18 +786,20 @@ def contains_rejections(error, validator, schema, instance, index):
     clause = clause_of(error, schema, index)
     site = list(error.absolute_path)
     rejections = []
+    root_schema, site_prefix = root
     for index, item in enumerate(error.instance):
         errors = with_prefix(
             errors_from(sorted(subschema.iter_errors(item),
                                key=lambda e: list(e.absolute_path)),
-                        error.validator_value, instance, subschema, index),
+                        error.validator_value, instance, subschema, index,
+                        (root_schema, site_prefix + site + [index])),
             site + [index], clause)
         if errors:
             rejections.append({"site": site + [index], "errors": errors})
     return rejections
 
 
-def branch_rejections(error, schema, instance, validator, index):
+def branch_rejections(error, schema, instance, validator, index, root):
     """One rejection per branch tried, with the errors that were its grounds.
 
     The branch a context error came from is the first segment of its schema
@@ -643,7 +811,7 @@ def branch_rejections(error, schema, instance, validator, index):
     for cause in error.context or []:
         grouped.setdefault(list(cause.schema_path)[0], []).append(cause)
     return [{"clause": clause + [branch],
-             "errors": errors_from(causes, schema, instance, validator, index)}
+             "errors": errors_from(causes, schema, instance, validator, index, root)}
             for branch, causes in grouped.items()]
 
 
@@ -688,11 +856,14 @@ def boolean_member(error, schema, instance, index, seen):
     return present[index_of]
 
 
-def error_entry(error, schema, instance, seen, validator, index):
+def error_entry(error, schema, instance, seen, validator, index, root):
     """One violation, with what was tried beneath it where the clause offered
     more than one way to be satisfied."""
-    authored = custom_message(error, schema)
-    constraint, particulars = split_params(error, seen)
+    root_schema, site_prefix = root
+    params = offender_params(error, seen)
+    authored = custom_message(error, root_schema, instance, index, params,
+                              site_prefix + list(error.absolute_path))
+    constraint, particulars = split_params(params)
     site, clause = list(error.absolute_path), clause_of(error, schema, index)
     if error.validator is None and clause:
         # An empty clause is the whole schema being the boolean, where there
@@ -706,32 +877,41 @@ def error_entry(error, schema, instance, seen, validator, index):
         "document": document_of(error, schema, index),
         "constraint": constraint,
         "particulars": particulars,
-        "message": (interpolate(authored, instance, error.absolute_path)
-                    if authored else error.message),
+        "message": authored if authored is not None else error.message,
     }
     if error.validator in BRANCHING_KEYWORDS:
-        rejections = (contains_rejections(error, validator, schema, instance, index)
+        rejections = (contains_rejections(error, validator, schema, instance, index, root)
                       if error.validator == "contains"
-                      else branch_rejections(error, schema, instance, validator, index))
+                      else branch_rejections(error, schema, instance, validator, index, root))
         if rejections:
             entry["rejections"] = rejections
     return entry
 
 
-def errors_from(errors, schema, instance, validator, index):
+def errors_from(errors, schema, instance, validator, index, root=None):
     """The report's errors, one per violation.
 
     A transparent applicator contributes nothing: its conclusion repeats a
     location already reported. A false "additionalProperties" or
     "unevaluatedProperties" contributes one error per member it rejected,
     located at that member, rather than one at the parent naming several.
+
+    `root` is the schema the caller gave and the site prefix under which
+    these errors sit in the instance -- the same as `schema` and nothing,
+    except for errors recomputed against a subschema in its own right,
+    whose message lookup still has to start from the top.
     """
+    if root is None:
+        root = (schema, [])
+    root_schema, site_prefix = root
     seen = collections.Counter()
     report = []
     for error in errors:
         if error.validator in TRANSPARENT_KEYWORDS:
             rejected = (extra_members(error, validator)
                         if error.validator in MEMBER_REJECTING else None)
+            authored = custom_message(error, root_schema, instance, index, {},
+                                      site_prefix + list(error.absolute_path))
             for name in rejected or []:
                 report.append({
                     "site": list(error.absolute_path) + [name],
@@ -740,10 +920,10 @@ def errors_from(errors, schema, instance, validator, index):
                     "document": document_of(error, schema, index),
                     "constraint": {},
                     "particulars": {PARAM_FOR_MEMBER[error.validator]: name},
-                    "message": error.message,
+                    "message": authored if authored is not None else error.message,
                 })
             continue
-        report.append(error_entry(error, schema, instance, seen, validator, index))
+        report.append(error_entry(error, schema, instance, seen, validator, index, root))
     return report
 
 
@@ -776,11 +956,14 @@ def value_at(site, instance):
     return node
 
 
-# The report's fields, in the order they are written. Stated here because
-# "found" is filled in a pass after the rest, and the two legs must write
-# byte-identical reports.
+# The report's fields, in the order they are written, and the members of
+# "constraint" and "particulars" sorted. Stated here because "found" is
+# filled in a pass after the rest, and because the two legs must write
+# byte-identical reports where each library hands its params over in its
+# own order.
 FIELD_ORDER = ["site", "keyword", "clause", "document",
                "constraint", "particulars", "found", "message", "rejections"]
+SORTED_FIELDS = ("constraint", "particulars")
 
 
 def with_found(errors, instance):
@@ -791,6 +974,9 @@ def with_found(errors, instance):
         if "rejections" in entry:
             entry["rejections"] = [dict(r, errors=with_found(r["errors"], instance))
                                    for r in entry["rejections"]]
+        for field in SORTED_FIELDS:
+            if isinstance(entry.get(field), dict):
+                entry[field] = dict(sorted(entry[field].items()))
         ordered = {key: entry[key] for key in FIELD_ORDER if key in entry}
         ordered.update({k: v for k, v in entry.items() if k not in ordered})
         filled.append(ordered)
@@ -875,7 +1061,7 @@ def load_ref_resources(paths, ignore_declared):
     return resources, documents
 
 
-def verdict_lines(errors, schema, instance):
+def verdict_lines(errors, schema, instance, index):
     """The text form: one line per error, exactly as the library reported it.
 
     Built from the errors rather than from the findings, so that the text a
@@ -883,12 +1069,14 @@ def verdict_lines(errors, schema, instance):
     The two forms answer different questions -- what each library said, and
     what the two of them agree happened.
     """
+    seen = collections.Counter()
     lines = []
     for error in errors:
         loc = location(error)
-        declared = custom_message(error, schema)
-        message = (interpolate(declared, instance, error.absolute_path)
-                   if declared else error.message)
+        params = offender_params(error, seen)
+        declared = custom_message(error, schema, instance, index, params,
+                                  list(error.absolute_path))
+        message = declared if declared is not None else error.message
         lines.append(f"INVALID: {message}" if loc == "/"
                      else f"INVALID: {loc}: {message}")
     return lines
@@ -978,7 +1166,7 @@ def main(argv):
     if not errors:
         return emit(args, True, [], [])
     return emit(args, False,
-                verdict_lines(errors, schema, instance),
+                verdict_lines(errors, schema, instance, index),
                 tidy(with_found(
                     errors_from(errors, schema, instance, validator, index),
                     instance)))
