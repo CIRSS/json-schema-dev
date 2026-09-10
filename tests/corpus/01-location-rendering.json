@@ -29,7 +29,8 @@
               ],
               "constraint": {
                 "type": "object"
-              }
+              },
+              "found": 5
             }
           ]
         }
@@ -67,6 +68,9 @@
               ],
               "particulars": {
                 "missingProperty": "b"
+              },
+              "found": {
+                "a": 1
               }
             }
           ]
@@ -114,7 +118,8 @@
               ],
               "particulars": {
                 "missingProperty": "id"
-              }
+              },
+              "found": {}
             }
           ]
         }
@@ -156,7 +161,8 @@
               ],
               "constraint": {
                 "type": "number"
-              }
+              },
+              "found": "x"
             }
           ]
         }
@@ -217,7 +223,8 @@
               ],
               "constraint": {
                 "type": "string"
-              }
+              },
+              "found": 7
             }
           ]
         }
@@ -264,7 +271,8 @@
               ],
               "constraint": {
                 "type": "number"
-              }
+              },
+              "found": "not a number"
             }
           ]
         }
@@ -312,7 +320,8 @@
               ],
               "constraint": {
                 "type": "number"
-              }
+              },
+              "found": "not a number"
             }
           ]
         }
@@ -360,7 +369,8 @@
               ],
               "constraint": {
                 "type": "number"
-              }
+              },
+              "found": "not a number"
             }
           ]
         }
@@ -409,7 +419,8 @@
               ],
               "constraint": {
                 "type": "number"
-              }
+              },
+              "found": "x"
             },
             {
               "site": [
@@ -423,7 +434,8 @@
               ],
               "constraint": {
                 "type": "number"
-              }
+              },
+              "found": "y"
             }
           ]
         }
@@ -450,7 +462,10 @@
           "valid": false,
           "errors": [
             {
-              "clause": []
+              "clause": [],
+              "found": {
+                "a": 1
+              }
             }
           ]
         }
@@ -487,7 +502,8 @@
               "clause": [
                 "properties",
                 "a"
-              ]
+              ],
+              "found": 1
             }
           ]
         }

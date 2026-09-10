@@ -376,6 +376,56 @@ function errorsFrom(rawErrors, instance, schema, index, subschemas) {
   return top;
 }
 
+// The value the report points at: the instance walked by the entry's own
+// site, resolved here rather than taken from what the library attached to
+// the error. The two differ wherever a site is relocated -- an
+// additionalProperties failure is reported at the offending member while
+// Ajv's own data is the parent -- so resolving against the finished path,
+// once, is what makes "found is the value at site" a property of the report
+// rather than an intention.
+function valueAt(site, instance) {
+  let node = instance;
+  for (const segment of site) {
+    if (node === null || typeof node !== 'object'
+        || !Object.prototype.hasOwnProperty.call(node, segment)) {
+      // A site that does not resolve is a defect in this program, not a
+      // verdict: the report would be naming a place the instance does not
+      // have. Same stance as an unlocatable clause.
+      die(`cannot resolve the site that failed: /${site.join('/')} names `
+          + 'nothing in the instance');
+    }
+    node = node[segment];
+  }
+  return node;
+}
+
+// The report's fields, in the order they are written. Stated here because
+// `found` is filled in a pass after the rest, and the two legs must write
+// byte-identical reports.
+const FIELD_ORDER = [
+  'site', 'keyword', 'clause', 'document',
+  'constraint', 'particulars', 'found', 'message', 'rejections',
+];
+
+// Fill each entry's `found` from its own site, throughout the report.
+function withFound(errors, instance) {
+  return errors.map((entry) => {
+    const filled = { ...entry, found: valueAt(entry.site ?? [], instance) };
+    if (filled.rejections) {
+      filled.rejections = filled.rejections.map(
+        (rejection) => ({ ...rejection, errors: withFound(rejection.errors, instance) }));
+    }
+    const ordered = {};
+    for (const key of FIELD_ORDER) {
+      if (Object.prototype.hasOwnProperty.call(filled, key)) ordered[key] = filled[key];
+    }
+    for (const [key, value] of Object.entries(filled)) {
+      if (!Object.prototype.hasOwnProperty.call(ordered, key)) ordered[key] = value;
+    }
+    return ordered;
+  });
+}
+
 // Drop what has nothing to say, throughout the report. Absent is not
 // unknown here, it is nothing to say: no site means the document as a
 // whole, no document means the schema given on the command line, and an
@@ -647,9 +697,11 @@ function main() {
     return loc === '/' ? `INVALID: ${err.message}` : `INVALID: ${loc}: ${err.message}`;
   });
   return emit(opts, false, lines,
-              tidy(errorsFrom(validate.errors, instance, schema,
-                              indexDocuments(schema, Object.values(refSchemas)),
-                              indexSubschemas(schema, Object.values(refSchemas)))));
+              tidy(withFound(
+                errorsFrom(validate.errors, instance, schema,
+                           indexDocuments(schema, Object.values(refSchemas)),
+                           indexSubschemas(schema, Object.values(refSchemas))),
+                instance)));
 }
 
 process.exit(main());

@@ -87,6 +87,9 @@
               "document": "https://example.org/component",
               "particulars": {
                 "missingProperty": "id"
+              },
+              "found": {
+                "status": "final"
               }
             }
           ]
@@ -195,6 +198,9 @@
               "document": "https://example.org/base",
               "particulars": {
                 "missingProperty": "id"
+              },
+              "found": {
+                "status": "final"
               }
             }
           ]
@@ -280,7 +286,8 @@
               "document": "https://example.org/component",
               "constraint": {
                 "pattern": "^[a-z]+$"
-              }
+              },
+              "found": "NOT LOWER"
             }
           ]
         }
@@ -332,7 +339,8 @@
               ],
               "constraint": {
                 "type": "number"
-              }
+              },
+              "found": "hello"
             }
           ]
         }
@@ -384,7 +392,8 @@
               ],
               "constraint": {
                 "type": "number"
-              }
+              },
+              "found": "hello"
             }
           ]
         }

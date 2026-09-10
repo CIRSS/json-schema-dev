@@ -83,10 +83,13 @@ Every run produces a report, so a valid instance gives `{"valid": true, "errors"
 | `document` | which of the schemas you supplied the clause is in, by its `$id` |
 | `constraint` | what the schema demanded — `allowedValues`, `limit`, `pattern` |
 | `particulars` | what specifically went wrong — `missingProperty`, `additionalProperty`, the two indexes of a duplicate |
+| `found` | the value the instance actually had at `site` |
 | `message` | the library's wording, or an authored `errorMessage` where one covers the failure |
 | `rejections` | on a branching clause: what was tried, and why each was refused |
 
 **Absent is not unknown; it is nothing to say.** No `site` means the document as a whole. No `document` means the schema given on the command line. An empty `constraint` or `particulars` is omitted rather than written as a pair of braces. Across the keywords implemented, `constraint` and `particulars` never both appear: a keyword reports one kind or the other.
+
+**`found` is the value at `site`**, resolved against the instance rather than taken from whatever the library attached to its error — a site is sometimes relocated, an `additionalProperties` failure being reported at the offending member and a cause recomputed under a `contains` conclusion being re-rooted beneath it, and in both the library's own value is the parent's. It is carried whole, whatever its size, which the instance bounds: a consumer of this form does not have the instance parsed, and a violation reported without the value that caused it frequently cannot be interpreted at all. A `found` that does not resolve is a defect in the wrapper and stops the run. The `parse` and `duplicateMember` entries carry none, for the same reason they carry no `clause`: they are defects of the document rather than findings against a rule.
 
 **A clause is always a path from the root of a document the caller supplied** — the command-line schema, or a `--ref` file. A subschema may name itself with an `$id`, making it a resource in its own right, or with an `$anchor`; both are navigation the wrapper does and neither appears in a report, because the file a reader has open is the one they were handed.
 

@@ -747,6 +747,56 @@ def errors_from(errors, schema, instance, validator, index):
     return report
 
 
+def value_at(site, instance):
+    """The value the report points at: the instance walked by the entry's own
+    site, resolved here rather than taken from the error the library raised.
+
+    The two differ wherever a site is relocated -- an additionalProperties
+    failure is reported at the offending member, and a recomputed "contains"
+    cause is re-rooted afterwards by with_prefix -- so resolving against the
+    finished path, once, is what makes "found is the value at site" a
+    property of the report rather than an intention.
+    """
+    node = instance
+    for segment in site:
+        if isinstance(node, dict):
+            missing = segment not in node
+        elif isinstance(node, list):
+            missing = not (isinstance(segment, int) and 0 <= segment < len(node))
+        else:
+            missing = True
+        if missing:
+            # A site that does not resolve is a defect in this program, not
+            # a verdict: the report would be naming a place the instance
+            # does not have. Same stance as an unlocatable clause.
+            die("cannot resolve the site that failed: /"
+                + "/".join(str(s) for s in site)
+                + " names nothing in the instance")
+        node = node[segment]
+    return node
+
+
+# The report's fields, in the order they are written. Stated here because
+# "found" is filled in a pass after the rest, and the two legs must write
+# byte-identical reports.
+FIELD_ORDER = ["site", "keyword", "clause", "document",
+               "constraint", "particulars", "found", "message", "rejections"]
+
+
+def with_found(errors, instance):
+    """Fill each entry's "found" from its own site, throughout the report."""
+    filled = []
+    for entry in errors:
+        entry = dict(entry, found=value_at(entry.get("site", []), instance))
+        if "rejections" in entry:
+            entry["rejections"] = [dict(r, errors=with_found(r["errors"], instance))
+                                   for r in entry["rejections"]]
+        ordered = {key: entry[key] for key in FIELD_ORDER if key in entry}
+        ordered.update({k: v for k, v in entry.items() if k not in ordered})
+        filled.append(ordered)
+    return filled
+
+
 def tidy(errors):
     """Drop what has nothing to say, throughout the report.
 
@@ -929,7 +979,9 @@ def main(argv):
         return emit(args, True, [], [])
     return emit(args, False,
                 verdict_lines(errors, schema, instance),
-                tidy(errors_from(errors, schema, instance, validator, index)))
+                tidy(with_found(
+                    errors_from(errors, schema, instance, validator, index),
+                    instance)))
 
 
 if __name__ == "__main__":

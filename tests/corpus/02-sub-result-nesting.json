@@ -38,6 +38,10 @@
               "constraint": {
                 "minContains": 1
               },
+              "found": [
+                "ext1",
+                "ext2"
+              ],
               "rejections": [
                 {
                   "site": [
@@ -55,7 +59,8 @@
                       ],
                       "constraint": {
                         "allowedValue": "core"
-                      }
+                      },
+                      "found": "ext1"
                     }
                   ]
                 },
@@ -75,7 +80,8 @@
                       ],
                       "constraint": {
                         "allowedValue": "core"
-                      }
+                      },
+                      "found": "ext2"
                     }
                   ]
                 }
@@ -118,7 +124,8 @@
               ],
               "constraint": {
                 "minContains": 1
-              }
+              },
+              "found": []
             }
           ]
         }
@@ -158,6 +165,7 @@
               "clause": [
                 "anyOf"
               ],
+              "found": "text",
               "rejections": [
                 {
                   "clause": [
@@ -174,7 +182,8 @@
                       ],
                       "constraint": {
                         "type": "number"
-                      }
+                      },
+                      "found": "text"
                     }
                   ]
                 },
@@ -193,7 +202,8 @@
                       ],
                       "constraint": {
                         "type": "boolean"
-                      }
+                      },
+                      "found": "text"
                     }
                   ]
                 }
@@ -244,6 +254,7 @@
               "particulars": {
                 "passingSchemas": null
               },
+              "found": "published",
               "rejections": [
                 {
                   "clause": [
@@ -260,7 +271,8 @@
                       ],
                       "constraint": {
                         "allowedValue": "draft"
-                      }
+                      },
+                      "found": "published"
                     }
                   ]
                 },
@@ -279,7 +291,8 @@
                       ],
                       "constraint": {
                         "allowedValue": "final"
-                      }
+                      },
+                      "found": "published"
                     }
                   ]
                 }
@@ -330,7 +343,8 @@
                   0,
                   1
                 ]
-              }
+              },
+              "found": 5
             }
           ]
         }
@@ -381,6 +395,9 @@
               ],
               "particulars": {
                 "missingProperty": "radius"
+              },
+              "found": {
+                "kind": "circle"
               }
             }
           ]
@@ -441,6 +458,9 @@
               ],
               "particulars": {
                 "missingProperty": "side"
+              },
+              "found": {
+                "kind": "square"
               }
             }
           ]
@@ -493,7 +513,8 @@
               ],
               "particulars": {
                 "missingProperty": "a"
-              }
+              },
+              "found": {}
             },
             {
               "keyword": "required",
@@ -504,7 +525,8 @@
               ],
               "particulars": {
                 "missingProperty": "b"
-              }
+              },
+              "found": {}
             }
           ]
         }
@@ -536,7 +558,8 @@
               "keyword": "not",
               "clause": [
                 "not"
-              ]
+              ],
+              "found": "text"
             }
           ]
         }
@@ -579,6 +602,9 @@
               ],
               "particulars": {
                 "missingProperty": "billing"
+              },
+              "found": {
+                "card": "4111"
               }
             }
           ]
@@ -619,6 +645,10 @@
               ],
               "constraint": {
                 "pattern": "^[a-z]+$"
+              },
+              "found": {
+                "ok": 1,
+                "Not OK": 2
               }
             }
           ]
@@ -670,7 +700,8 @@
               ],
               "constraint": {
                 "type": "number"
-              }
+              },
+              "found": "not a number"
             }
           ]
         }
@@ -726,6 +757,7 @@
                 "tagged",
                 "anyOf"
               ],
+              "found": "z",
               "rejections": [
                 {
                   "clause": [
@@ -749,7 +781,8 @@
                       ],
                       "constraint": {
                         "allowedValue": "a"
-                      }
+                      },
+                      "found": "z"
                     }
                   ]
                 },
@@ -775,7 +808,8 @@
                       ],
                       "constraint": {
                         "allowedValue": "b"
-                      }
+                      },
+                      "found": "z"
                     }
                   ]
                 }
@@ -837,6 +871,9 @@
               "clause": [
                 "anyOf"
               ],
+              "found": [
+                "ext"
+              ],
               "rejections": [
                 {
                   "clause": [
@@ -855,7 +892,10 @@
                       ],
                       "constraint": {
                         "type": "object"
-                      }
+                      },
+                      "found": [
+                        "ext"
+                      ]
                     }
                   ]
                 },
@@ -875,6 +915,9 @@
                       "constraint": {
                         "minContains": 1
                       },
+                      "found": [
+                        "ext"
+                      ],
                       "rejections": [
                         {
                           "site": [
@@ -894,7 +937,8 @@
                               ],
                               "constraint": {
                                 "allowedValue": "core"
-                              }
+                              },
+                              "found": "ext"
                             }
                           ]
                         }
