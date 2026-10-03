@@ -290,6 +290,165 @@
           ]
         }
       }
+    },
+    {
+      "name": "each name propertyNames rejects is reported at its member, with no value found",
+      "description": "Both libraries locate a failing name at the object holding it, so without relocation every rejected name is the same finding. The site ends in the name; the member's value was not checked, so nothing is reported as found.",
+      "schema": {
+        "properties": {
+          "inner": {
+            "propertyNames": {
+              "$ref": "#/$defs/name"
+            }
+          }
+        },
+        "$defs": {
+          "name": {
+            "if": {
+              "pattern": "^x:"
+            },
+            "then": {
+              "enum": [
+                "x:a"
+              ]
+            }
+          }
+        }
+      },
+      "instance": {
+        "inner": {
+          "x:a": 1,
+          "x:b": 2,
+          "x:c": {
+            "deep": 3
+          },
+          "other": 4
+        }
+      },
+      "expect": {
+        "exit": 1,
+        "stdout": {
+          "jsonschema-validate": [
+            "INVALID: /inner: 'x:b' is not one of ['x:a']",
+            "INVALID: /inner: 'x:c' is not one of ['x:a']"
+          ],
+          "ajv-validate": [
+            "INVALID: /inner: must be equal to one of the allowed values",
+            "INVALID: /inner: must match \"then\" schema",
+            "INVALID: /inner: property name must be valid",
+            "INVALID: /inner: must be equal to one of the allowed values",
+            "INVALID: /inner: must match \"then\" schema",
+            "INVALID: /inner: property name must be valid"
+          ]
+        },
+        "report": {
+          "valid": false,
+          "errors": [
+            {
+              "site": [
+                "inner",
+                "x:b"
+              ],
+              "keyword": "enum",
+              "clause": [
+                "$defs",
+                "name",
+                "then",
+                "enum"
+              ],
+              "constraint": {
+                "allowedValues": [
+                  "x:a"
+                ]
+              }
+            },
+            {
+              "site": [
+                "inner",
+                "x:c"
+              ],
+              "keyword": "enum",
+              "clause": [
+                "$defs",
+                "name",
+                "then",
+                "enum"
+              ],
+              "constraint": {
+                "allowedValues": [
+                  "x:a"
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "defect": {
+        "summary": "ajv-validate prints an applicator's sub-results as peers of its conclusion; jsonschema-validate prints the conclusion alone, so the two legs report different numbers of lines.",
+        "divergent": true
+      }
+    },
+    {
+      "name": "propertyNames false rejects each name at its member",
+      "schema": {
+        "properties": {
+          "inner": {
+            "propertyNames": false
+          }
+        }
+      },
+      "instance": {
+        "inner": {
+          "a": 1,
+          "b": 2
+        }
+      },
+      "expect": {
+        "exit": 1,
+        "stdout": {
+          "jsonschema-validate": [
+            "INVALID: /inner: False schema does not allow 'a'",
+            "INVALID: /inner: False schema does not allow 'b'"
+          ],
+          "ajv-validate": [
+            "INVALID: /inner: boolean schema is false",
+            "INVALID: /inner: property name must be valid",
+            "INVALID: /inner: boolean schema is false",
+            "INVALID: /inner: property name must be valid"
+          ]
+        },
+        "report": {
+          "valid": false,
+          "errors": [
+            {
+              "site": [
+                "inner",
+                "a"
+              ],
+              "clause": [
+                "properties",
+                "inner",
+                "propertyNames"
+              ]
+            },
+            {
+              "site": [
+                "inner",
+                "b"
+              ],
+              "clause": [
+                "properties",
+                "inner",
+                "propertyNames"
+              ]
+            }
+          ]
+        }
+      },
+      "defect": {
+        "summary": "ajv-validate prints an applicator's sub-results as peers of its conclusion; jsonschema-validate prints the conclusion alone, so the two legs report different numbers of lines.",
+        "divergent": true
+      }
     }
   ]
 }

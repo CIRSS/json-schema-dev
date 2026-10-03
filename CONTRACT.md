@@ -103,6 +103,8 @@ Every run produces a report, so a valid instance gives `{"valid": true, "errors"
 
 **`additionalProperties` and `unevaluatedProperties` produce one entry per rejected member, located at that member**, rather than one at the parent naming several.
 
+**A failure under `propertyNames` is located at the member whose name failed, and carries no `found`.** Both libraries locate it at the object holding the name, so every name rejected there would be the same entry, and nothing in it would say which name failed. The site's last segment is the name; the member's value was not checked, so there is no value to report. The text form keeps each library's own location.
+
 The parse tier appears in the report too, since exit status and `valid` must agree: a document that does not parse is one entry with the keyword `parse`, and `--reject-duplicate-members` produces one with the keyword `duplicateMember` per repeated name.
 
 ### What must agree, and what need not

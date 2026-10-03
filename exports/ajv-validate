@@ -529,6 +529,15 @@ function errorEntry(err, instance, schema, index, subschemas) {
     const member = particulars.additionalProperty ?? particulars.unevaluatedProperty;
     if (member !== undefined) entry.site = [...entry.site, member];
   }
+  // Under propertyNames the thing checked is a member's name, which Ajv
+  // locates at the object holding it and carries as err.propertyName.
+  // Located at that member instead, each name rejected is its own finding,
+  // and the site's last segment is the name; there is no value to report,
+  // so `nameChecked` is scaffolding telling withFound to leave found out.
+  if (err.propertyName !== undefined) {
+    entry.site = [...entry.site, err.propertyName];
+    entry.nameChecked = true;
+  }
   return entry;
 }
 
@@ -612,7 +621,8 @@ const SORTED_FIELDS = ['constraint', 'particulars'];
 // Fill each entry's `found` from its own site, throughout the report.
 function withFound(errors, instance) {
   return errors.map((entry) => {
-    const filled = { ...entry, found: valueAt(entry.site ?? [], instance) };
+    const value = valueAt(entry.site ?? [], instance);
+    const filled = entry.nameChecked ? { ...entry } : { ...entry, found: value };
     if (filled.rejections) {
       filled.rejections = filled.rejections.map(
         (rejection) => ({ ...rejection, errors: withFound(rejection.errors, instance) }));
@@ -638,8 +648,8 @@ function withFound(errors, instance) {
 // unknown here, it is nothing to say: no site means the document as a
 // whole, no document means the schema given on the command line, and an
 // empty constraint or particulars is a pair of braces a reader must look
-// inside to learn was empty. `branch` is scaffolding for the grouping above
-// and never reaches the file.
+// inside to learn was empty. `branch` is scaffolding for the grouping above,
+// and `nameChecked` for withFound, and neither reaches the file.
 function tidy(errors) {
   return errors.map((entry) => {
     const pruned = {};
@@ -649,7 +659,7 @@ function tidy(errors) {
       if (key === 'document' && value === null) continue;
       if ((key === 'constraint' || key === 'particulars')
           && Object.keys(value).length === 0) continue;
-      if (key === 'branch') continue;
+      if (key === 'branch' || key === 'nameChecked') continue;
       pruned[key] = key === 'rejections'
         ? value.map(({ branch, ...rest }) => ({ ...rest, errors: tidy(rest.errors) }))
         : value;

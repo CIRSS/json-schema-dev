@@ -967,6 +967,106 @@
           ]
         }
       }
+    },
+    {
+      "name": "a message under propertyNames covers each name it rejects",
+      "schema": {
+        "properties": {
+          "inner": {
+            "propertyNames": {
+              "$ref": "#/$defs/name"
+            }
+          }
+        },
+        "$defs": {
+          "name": {
+            "if": {
+              "pattern": "^x:"
+            },
+            "then": {
+              "enum": [
+                "x:a"
+              ],
+              "errorMessage": {
+                "enum": "an x: name is one this schema defines"
+              }
+            }
+          }
+        }
+      },
+      "instance": {
+        "inner": {
+          "x:a": 1,
+          "x:b": 2,
+          "x:c": {
+            "deep": 3
+          },
+          "other": 4
+        }
+      },
+      "identicalMessages": true,
+      "expect": {
+        "exit": 1,
+        "stdout": {
+          "jsonschema-validate": [
+            "INVALID: /inner: an x: name is one this schema defines",
+            "INVALID: /inner: an x: name is one this schema defines"
+          ],
+          "ajv-validate": [
+            "INVALID: /inner: an x: name is one this schema defines",
+            "INVALID: /inner: must match \"then\" schema",
+            "INVALID: /inner: property name must be valid",
+            "INVALID: /inner: an x: name is one this schema defines",
+            "INVALID: /inner: must match \"then\" schema",
+            "INVALID: /inner: property name must be valid"
+          ]
+        },
+        "report": {
+          "valid": false,
+          "errors": [
+            {
+              "site": [
+                "inner",
+                "x:b"
+              ],
+              "keyword": "enum",
+              "clause": [
+                "$defs",
+                "name",
+                "then",
+                "enum"
+              ],
+              "constraint": {
+                "allowedValues": [
+                  "x:a"
+                ]
+              }
+            },
+            {
+              "site": [
+                "inner",
+                "x:c"
+              ],
+              "keyword": "enum",
+              "clause": [
+                "$defs",
+                "name",
+                "then",
+                "enum"
+              ],
+              "constraint": {
+                "allowedValues": [
+                  "x:a"
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "defect": {
+        "summary": "ajv-validate prints an applicator's sub-results as peers of its conclusion; jsonschema-validate prints the conclusion alone, so the two legs report different numbers of lines.",
+        "divergent": true
+      }
     }
   ]
 }

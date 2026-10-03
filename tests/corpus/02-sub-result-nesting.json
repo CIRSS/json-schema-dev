@@ -638,6 +638,9 @@
           "valid": false,
           "errors": [
             {
+              "site": [
+                "Not OK"
+              ],
               "keyword": "pattern",
               "clause": [
                 "propertyNames",
@@ -645,10 +648,6 @@
               ],
               "constraint": {
                 "pattern": "^[a-z]+$"
-              },
-              "found": {
-                "ok": 1,
-                "Not OK": 2
               }
             }
           ]

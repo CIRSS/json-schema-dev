@@ -856,6 +856,26 @@ def boolean_member(error, schema, instance, index, seen):
     return present[index_of]
 
 
+def checked_name(error, instance, at):
+    """The member name a failure under "propertyNames" was about, or None.
+
+    python-jsonschema checks a name by descending into it without extending
+    the path, so the error carries the name as its instance while its path
+    stops at the object holding it -- the only way a string is checked at an
+    object's location. Located at that member instead, each name rejected is
+    its own finding, as Ajv's err.propertyName lets the other leg report it.
+    """
+    node = instance
+    for segment in at:
+        try:
+            node = node[segment]
+        except (KeyError, IndexError, TypeError):
+            return None
+    if isinstance(error.instance, str) and isinstance(node, dict) and error.instance in node:
+        return error.instance
+    return None
+
+
 def error_entry(error, schema, instance, seen, validator, index, root):
     """One violation, with what was tried beneath it where the clause offered
     more than one way to be satisfied."""
@@ -865,7 +885,10 @@ def error_entry(error, schema, instance, seen, validator, index, root):
                               site_prefix + list(error.absolute_path))
     constraint, particulars = split_params(params)
     site, clause = list(error.absolute_path), clause_of(error, schema, index)
-    if error.validator is None and clause:
+    name = checked_name(error, instance, site_prefix + site)
+    if name is not None:
+        site = site + [name]
+    elif error.validator is None and clause:
         # An empty clause is the whole schema being the boolean, where there
         # is no member it rejected: the document itself is what failed.
         member = boolean_member(error, schema, instance, index, seen)
@@ -879,6 +902,8 @@ def error_entry(error, schema, instance, seen, validator, index, root):
         "particulars": particulars,
         "message": authored if authored is not None else error.message,
     }
+    if name is not None:
+        entry["nameChecked"] = True
     if error.validator in BRANCHING_KEYWORDS:
         rejections = (contains_rejections(error, validator, schema, instance, index, root)
                       if error.validator == "contains"
@@ -967,10 +992,15 @@ SORTED_FIELDS = ("constraint", "particulars")
 
 
 def with_found(errors, instance):
-    """Fill each entry's "found" from its own site, throughout the report."""
+    """Fill each entry's "found" from its own site, throughout the report.
+
+    Where a member's name is what was checked, the site ends in the name and
+    there is no value to report, so "found" is left out.
+    """
     filled = []
     for entry in errors:
-        entry = dict(entry, found=value_at(entry.get("site", []), instance))
+        value = value_at(entry.get("site", []), instance)
+        entry = dict(entry) if entry.get("nameChecked") else dict(entry, found=value)
         if "rejections" in entry:
             entry["rejections"] = [dict(r, errors=with_found(r["errors"], instance))
                                    for r in entry["rejections"]]
@@ -989,12 +1019,15 @@ def tidy(errors):
     Absent is not unknown here, it is nothing to say: no site means the
     document as a whole, no document means the schema given on the command
     line, and an empty constraint or particulars is a pair of braces a
-    reader must look inside to learn was empty.
+    reader must look inside to learn was empty. "nameChecked" is
+    scaffolding for with_found and never reaches the file.
     """
     kept = []
     for entry in errors:
         pruned = {}
         for key, value in entry.items():
+            if key == "nameChecked":
+                continue
             if key == "keyword" and value is None:
                 continue
             if key == "site" and value == []:
